@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Audyt strat instalacji — PROF INSTAL</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header>
+      <h1>Audyt strat instalacji</h1>
+      <p>Porównanie strat starej i nowej instalacji wg norm</p>
+    </header>
+    <main>
+      <form action="{{ url_for('audit') }}" method="post" class="card">
+        <h2>Dane techniczne — stara instalacja</h2>
+        <div class="grid">
+          {% for k, v in audit_defaults_old.items() %}
+          <label>{{ k }} <input name="old_{{k}}" value="{{ v }}"></label>
+          {% endfor %}
+        </div>
+        <h2>Dane techniczne — nowa instalacja</h2>
+        <div class="grid">
+          {% for k, v in audit_defaults_new.items() %}
+          <label>{{ k }} <input name="new_{{k}}" value="{{ v }}"></label>
+          {% endfor %}
+        </div>
+        <div class="actions">
+          <button type="submit">Porównaj straty</button>
+        </div>
+      </form>
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="flash">
+            {% for m in messages %}<p>{{ m }}</p>{% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      <p><a href="{{ url_for('index') }}">← Wróć do panelu głównego</a></p>
+    </main>
+  </body>
+</html>

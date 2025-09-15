@@ -71,8 +71,12 @@
       {% endwith %}
     </main>
 
+    <nav style="margin:2em 0;text-align:center">
+      <a href="{{ url_for('audit') }}" class="button" style="font-size:1.2em;padding:0.5em 1.5em;">Tryb audytorski: porównanie strat instalacji</a>
+    </nav>
+
     <script>
-      const cityPrices = {{ city_prices | tojson }};
+      const cityPrices = JSON.parse('{{ city_prices | tojson | safe | escapejs }}');
       function onCityChange() {
         const sel = document.getElementById('city');
         const hp = document.getElementById('heat_price');

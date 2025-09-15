@@ -3,7 +3,7 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash
 from datetime import date
 import io
-from calc import compute_all
+from calc import compute_all, compute_audit
 
 app = Flask(__name__)
 app.secret_key = "change-me"
@@ -19,6 +19,30 @@ DEFAULTS = {
     "units": 65
 }
 
+# Domyślne parametry do audytu (stara i nowa instalacja)
+AUDIT_DEFAULTS_OLD = {
+    'Q': 20.0,         # kW
+    'L': 50.0,         # m
+    'd': 32.0,         # mm
+    'lambda': 0.035,   # W/mK (np. stara izolacja)
+    't_in': 60.0,      # °C
+    't_out': 40.0,     # °C
+    't_amb': 20.0,     # °C
+    'ins_thick': 10.0, # mm
+    'czas_pracy': 2000 # h/rok
+}
+AUDIT_DEFAULTS_NEW = {
+    'Q': 20.0,
+    'L': 50.0,
+    'd': 32.0,
+    'lambda': 0.025,   # nowa lepsza izolacja
+    't_in': 60.0,
+    't_out': 40.0,
+    't_amb': 20.0,
+    'ins_thick': 30.0, # grubsza izolacja
+    'czas_pracy': 2000
+}
+
 CITY_PRICES = {
     "Kraków": 73.69,
     "Warszawa": 85.00,
@@ -28,7 +52,20 @@ CITY_PRICES = {
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html", defaults=DEFAULTS, city_prices=CITY_PRICES)
+    return render_template("index.html", defaults=DEFAULTS, city_prices=CITY_PRICES, audit_defaults_old=AUDIT_DEFAULTS_OLD, audit_defaults_new=AUDIT_DEFAULTS_NEW)
+@app.route("/audit", methods=["GET", "POST"])
+def audit():
+    if request.method == "POST":
+        try:
+            # Pobierz parametry starej i nowej instalacji z formularza
+            params_old = {k: float(request.form.get(f"old_{k}", 0)) for k in AUDIT_DEFAULTS_OLD.keys()}
+            params_new = {k: float(request.form.get(f"new_{k}", 0)) for k in AUDIT_DEFAULTS_NEW.keys()}
+            res = compute_audit(params_old, params_new)
+            return render_template("audit_result.html", res=res, params_old=params_old, params_new=params_new, today=date.today().isoformat())
+        except Exception as e:
+            flash(f"Błąd danych: {e}")
+            return redirect(url_for("audit"))
+    return render_template("audit.html", audit_defaults_old=AUDIT_DEFAULTS_OLD, audit_defaults_new=AUDIT_DEFAULTS_NEW)
 
 @app.route("/calc", methods=["POST"])
 def calc():

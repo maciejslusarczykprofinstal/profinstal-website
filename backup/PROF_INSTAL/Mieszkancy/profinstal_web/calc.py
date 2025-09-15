@@ -55,3 +55,44 @@ def compute_all(bill: float, heat_price: float, unit: str, vat: float, month_m3:
         "save70_build_m": save70_build_m, "save80_build_m": save80_build_m,
         "save70_build_y": save70_build_y, "save80_build_y": save80_build_y
     }
+
+
+# --- AUDYTORSKIE PORÓWNANIE INSTALACJI ---
+def compute_audit(params_old: dict, params_new: dict) -> dict:
+    """
+    Porównuje straty starej i nowej instalacji na podstawie parametrów i wzorów z norm.
+    params_old, params_new: dict z kluczami:
+        - 'Q' (moc [kW]), 'L' (długość przewodów [m]), 'd' (średnica [mm]),
+        - 'lambda' (wsp. przewodzenia [W/mK]), 't_in' (temp. zasilania [°C]),
+        - 't_out' (temp. powrotu [°C]), 't_amb' (temp. otoczenia [°C]),
+        - 'ins_thick' (grubość izolacji [mm]), 'czas_pracy' (h/rok)
+    Zwraca słownik z porównaniem strat i oszczędności.
+    """
+    def heat_loss(Q, L, d, lamb, t_in, t_out, t_amb, ins_thick, czas_pracy):
+        # Wzór uproszczony wg PN-EN 12831, PN-EN 15316
+        # Strata liniowa: q = 2 * pi * lambda * (t_sr - t_amb) / ln((d+2*ins)/d)
+        from math import pi, log
+        d_m = d / 1000.0
+        ins_m = ins_thick / 1000.0
+        d_ext = d_m + 2*ins_m
+        t_sr = (t_in + t_out) / 2.0
+        q = 2 * pi * lamb * (t_sr - t_amb) / log(d_ext/d_m)
+        Q_loss = q * L * czas_pracy / 1000.0  # [kWh/rok]
+        return Q_loss
+
+    Q_loss_old = heat_loss(
+        params_old['Q'], params_old['L'], params_old['d'], params_old['lambda'],
+        params_old['t_in'], params_old['t_out'], params_old['t_amb'], params_old['ins_thick'], params_old['czas_pracy']
+    )
+    Q_loss_new = heat_loss(
+        params_new['Q'], params_new['L'], params_new['d'], params_new['lambda'],
+        params_new['t_in'], params_new['t_out'], params_new['t_amb'], params_new['ins_thick'], params_new['czas_pracy']
+    )
+    oszczednosc = Q_loss_old - Q_loss_new
+    procent = 100.0 * oszczednosc / Q_loss_old if Q_loss_old else 0.0
+    return {
+        'Q_loss_old': Q_loss_old,
+        'Q_loss_new': Q_loss_new,
+        'oszczednosc_kWh': oszczednosc,
+        'oszczednosc_proc': procent
+    }

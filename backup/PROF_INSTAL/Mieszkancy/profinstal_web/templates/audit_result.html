@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Wynik audytu strat — PROF INSTAL</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header>
+      <h1>Wynik audytu strat instalacji</h1>
+      <p>Data: {{ today }}</p>
+    </header>
+    <main>
+      <section class="card">
+        <h2>Parametry wejściowe</h2>
+        <h3>Stara instalacja</h3>
+        <ul>
+          {% for k, v in params_old.items() %}
+            <li>{{ k }}: {{ v }}</li>
+          {% endfor %}
+        </ul>
+        <h3>Nowa instalacja</h3>
+        <ul>
+          {% for k, v in params_new.items() %}
+            <li>{{ k }}: {{ v }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Porównanie strat</h2>
+        <p>Straty starej instalacji: <b>{{ res.Q_loss_old|round(2) }}</b> kWh/rok</p>
+        <p>Straty nowej instalacji: <b>{{ res.Q_loss_new|round(2) }}</b> kWh/rok</p>
+        <p>Oszczędność energii: <b>{{ res.oszczednosc_kWh|round(2) }}</b> kWh/rok</p>
+        <p>Oszczędność procentowa: <b>{{ res.oszczednosc_proc|round(1) }}</b>%</p>
+      </section>
+      <p><a href="{{ url_for('audit') }}">← Wróć do audytu</a></p>
+      <p><a href="{{ url_for('index') }}">← Wróć do panelu głównego</a></p>
+    </main>
+  </body>
+</html>
