@@ -1,0 +1,13 @@
+{
+  "name": "PROF INSTAL — Asystent CWU",
+  "short_name": "PROF INSTAL",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "icons": [
+    { "src": "/static/img/LOGO119x119.png", "sizes": "119x119", "type": "image/png" },
+    { "src": "/static/img/LOGO512x512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

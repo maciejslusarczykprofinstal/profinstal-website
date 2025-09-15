@@ -1,0 +1,14 @@
+# === PROF-INSTAL: kanon = https://prof-instal.pl ===
+RewriteEngine On
+
+# 1) WWW -> non-WWW (1 skok)
+RewriteCond %{HTTP_HOST} ^www\.prof-instal\.pl$ [NC]
+RewriteRule ^ https://prof-instal.pl%{REQUEST_URI} [L,R=301]
+
+# 2) Serwuj istniejące pliki/katalogi
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# 3) Fallback SPA (na końcu)
+RewriteRule ^ index.html [L]

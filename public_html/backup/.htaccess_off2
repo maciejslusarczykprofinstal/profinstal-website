@@ -1,0 +1,31 @@
+# Włącz mod_rewrite
+RewriteEngine On
+
+############################
+# 1) Wymuś HTTPS
+############################
+# (działa także za proxy z X-Forwarded-Proto)
+RewriteCond %{HTTPS} off [OR]
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+############################
+# 2) Wymuś wersję bez WWW
+############################
+RewriteCond %{HTTP_HOST} ^www\.prof-instal\.pl$ [NC]
+RewriteRule ^ https://prof-instal.pl%{REQUEST_URI} [L,R=301]
+
+############################
+# 3) Plik startowy
+############################
+DirectoryIndex index.html
+
+############################
+# 4) Fallback pod SPA (React/Vite/Angular)
+#    - jeśli serwujesz czysto statyczne pliki, zostaw jak jest
+#    - jeśli masz SPA z routowaniem po stronie klienta, odkomentuj poniższe 4 linie
+############################
+#RewriteCond %{REQUEST_FILENAME} -f [OR]
+#RewriteCond %{REQUEST_FILENAME} -d
+#RewriteRule ^ - [L]
+#RewriteRule . /index.html [L]

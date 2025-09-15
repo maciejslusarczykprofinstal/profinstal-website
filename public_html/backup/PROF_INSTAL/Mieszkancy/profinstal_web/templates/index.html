@@ -1,0 +1,83 @@
+
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PROF INSTAL — panel mieszkańca (web)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header>
+      <h1>PROF INSTAL — panel mieszkańca CWU (web)</h1>
+      <p>© 2025 PROF INSTAL Maciej Ślusarczyk</p>
+    </header>
+
+    <main>
+      <form action="{{ url_for('calc') }}" method="post" class="card">
+        <h2>Dane techniczno‑kosztowe</h2>
+
+        <div class="grid">
+          <label>Opłata z rachunku za podgrzanie wody [zł/m³]
+            <input name="bill" value="{{ defaults.bill }}">
+          </label>
+
+          <label>Miasto
+            <select name="city" id="city" onchange="onCityChange()">
+              {% for c in city_prices.keys() %}
+                <option value="{{c}}" {% if c == defaults.city %}selected{% endif %}>{{c}}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label>Cena ciepła MPEC/PEC — netto
+            <input name="heat_price" id="heat_price" value="{{ defaults.heat_price }}">
+          </label>
+
+          <fieldset>
+            <legend>Jednostka</legend>
+            <label><input type="radio" name="unit" value="GJ" checked> zł/GJ</label>
+            <label><input type="radio" name="unit" value="MJ"> zł/MJ</label>
+          </fieldset>
+
+          <label>VAT [%]
+            <input name="vat" value="{{ defaults.vat }}">
+          </label>
+
+          <label>Zużycie miesięczne [m³]
+            <input name="month_m3" value="{{ defaults.month_m3 }}">
+          </label>
+
+          <label>ΔT podgrzewu [°C]
+            <input name="dT" value="{{ defaults.dT }}">
+          </label>
+
+          <label>Liczba podobnych mieszkań
+            <input name="units" value="{{ defaults.units }}">
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="submit">Oblicz</button>
+        </div>
+      </form>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="flash">
+            {% for m in messages %}<p>{{ m }}</p>{% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+    </main>
+
+    <script>
+      const cityPrices = {{ city_prices | tojson }};
+      function onCityChange() {
+        const sel = document.getElementById('city');
+        const hp = document.getElementById('heat_price');
+        hp.value = cityPrices[sel.value] || hp.value;
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PROF INSTAL — Asystent CWU • Obliczenia, Raporty, Wnioski</title>
+  <meta name="description" content="Asystent CWU dla mieszkańców, wspólnot/spółdzielni i audytorów. Oblicz straty, moce i generuj raporty DOCX jednym kliknięciem." />
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0b1220">
+
+  <style>
+    :root{--bg:#0b1220;--text:#e2e8f0;--muted:#94a3b8;--surface:#0f172a;--line:rgba(148,163,184,.18);--brand:#10b981;--brand2:#22d3ee;--accent:#22d3ee}
+    [data-theme="light"]{--bg:#f8fafc;--text:#0b1220;--muted:#475569;--surface:#ffffff;--line:rgba(2,6,23,.12);--brand:#0ea5e9;--brand2:#22c55e;--accent:#0ea5e9}
+
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{font-family:system-ui,Segoe UI,Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    a{color:inherit}
+    .wrap{max-width:1120px;margin:auto;padding:0 20px}
+
+    .btn{appearance:none;border:0;border-radius:14px;padding:14px 18px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+    .btn-primary{background:linear-gradient(90deg,var(--brand),var(--brand2));color:#001b18;box-shadow:0 10px 30px rgba(2,6,23,.35)}
+    .btn-ghost{background:rgba(148,163,184,.1);border:1px solid var(--line);color:var(--text)}
+
+    .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+    .seg button{background:transparent;border:0;padding:10px 14px;color:var(--muted);cursor:pointer}
+    .seg button.active{background:color-mix(in oklab,var(--brand),transparent 88%);color:var(--text)}
+
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:20px}
+    .muted{color:var(--muted)}
+    .grid{display:grid;gap:18px}
+
+    .nav{position:sticky;top:0;backdrop-filter:saturate(140%) blur(8px);background:color-mix(in oklab,var(--bg),transparent 20%);border-bottom:1px solid var(--line);z-index:40}
+    .nav .row{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+    .brand-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--muted);font-weight:800}
+
+    .hero{padding:60px 0;background:
+      radial-gradient(1200px 600px at 80% -10%,color-mix(in oklab,var(--accent),transparent 75%),transparent),
+      radial-gradient(1000px 500px at -10% 10%,color-mix(in oklab,var(--brand),transparent 78%),transparent),
+      var(--bg)}
+    .hero h1{font-size:42px;line-height:1.1;margin:10px 0 10px}
+    .hero p.lead{font-size:18px;color:color-mix(in oklab,var(--text),#000 28%);max-width:70ch}
+    .hero-grid{display:grid;gap:28px;grid-template-columns:1.2fr .8fr;align-items:center}
+    @media (max-width:900px){.hero-grid{grid-template-columns:1fr}}
+
+    .tiles{padding:44px 0;background:color-mix(in oklab,var(--bg),#000 2%)}
+    .tiles-grid{grid-template-columns:repeat(3,1fr)}
+    @media (max-width:900px){.tiles-grid{grid-template-columns:1fr}}
+    .tile{padding:18px}
+
+    .how{padding:44px 0}
+    .how-grid{grid-template-columns:repeat(3,1fr)}
+    @media (max-width:900px){.how-grid{grid-template-columns:1fr}}
+    .how .step{padding:18px}
+
+    .pricing{padding:44px 0;background:color-mix(in oklab,var(--bg),#000 2%)}
+    .price-grid{grid-template-columns:repeat(3,1fr)}
+    @media (max-width:900px){.price-grid{grid-template-columns:1fr}}
+    .price{padding:18px}
+    .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:var(--brand);color:#01261f;font-weight:800;font-size:12px}
+
+    .contact{padding:44px 0}
+    .row{display:grid;gap:16px;grid-template-columns:1fr 1fr}
+    @media (max-width:900px){.row{grid-template-columns:1fr}}
+    .box{padding:18px}
+    .input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+    label{font-size:14px;color:var(--muted);margin:6px 0;display:block}
+
+    .manifesto{padding:44px 0}
+    .footer{padding:24px 0;border-top:1px solid var(--line);text-align:center}
+
+    .float{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:10px}
+    .iconbtn{border-radius:999px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--line);cursor:pointer}
+
+    .media{overflow:hidden;border-radius:22px}
+    .media img{width:100%;display:block}
+    .hide{display:none!important}
+
+    /* Manifest: KPI + kalkulator */
+    .stats{display:grid;gap:14px;grid-template-columns:repeat(3,1fr);margin-top:14px}
+    @media (max-width:900px){.stats{grid-template-columns:1fr}}
+    .kpi{padding:16px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02))}
+    .kpi h3{margin:0 0 6px 0;font-size:28px}
+    .kpi p{margin:0;color:var(--muted)}
+    .calc{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+    @media (max-width:900px){.calc{grid-template-columns:1fr 1fr}}
+    .calc .field{display:flex;flex-direction:column;gap:6px}
+    .calc .field input{padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+    .note{margin-top:10px;font-size:13px;color:var(--muted)}
+  </style>
+</head>
+
+<body>
+  <!-- KONFIG -->
+  <script>
+    window.PI_CONFIG = {
+      protocol: 'cwuapp://open',
+      downloadUrl: '/downloads/PROF-INSTAL-Setup.exe',
+      email: 'support@profinstal.info',
+      phone: '+48 000 000 000'
+    };
+  </script>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="wrap row">
+      <span class="brand-badge">🚀 PROF INSTAL • Asystent CWU</span>
+      <div style="display:flex;gap:10px;align-items:center">
+        <a href="#manifest" class="btn btn-ghost">Manifest</a>
+        <a href="#kontakt" class="btn btn-ghost">Kontakt</a>
+        <button id="themeToggle" class="iconbtn" title="Przełącz motyw" aria-label="Przełącz motyw">🌓</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO + PRZEŁĄCZNIK ODBIORCY -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="seg" role="tablist" aria-label="Grupa docelowa">
+          <button class="active" data-audience="mieszkaniec" role="tab" aria-selected="true">Mieszkańcy</button>
+          <button data-audience="wspolnota" role="tab" aria-selected="false">Wspólnoty/Spółdzielnie</button>
+          <button data-audience="audytor" role="tab" aria-selected="false">Audytorzy</button>
+          <button data-audience="expert" role="tab" aria-selected="false">Poziom eksperdzki</button>
+        </div>
+
+        <!-- MIESZKAŃCY -->
+        <div id="h-mieszkaniec" class="aud-block">
+          <h1>Niższe rachunki za ciepłą wodę bez zgadywania</h1>
+          <p class="lead">Wpisz parametry, wygeneruj pismo do zarządcy i pokaż twarde liczby: straty cyrkulacji, potencjalne oszczędności i jasne wnioski.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
+            <button id="btnOpen" class="btn btn-primary">Uruchom aplikację</button>
+            <a id="btnDownload" class="btn btn-ghost" href="/downloads/PROF-INSTAL-Setup.exe">Pobierz (Windows)</a>
+          </div>
+          <p class="muted" style="margin-top:8px">Masz aplikację? <code>Uruchom</code> odpali ją od razu. Nie masz? Pobierze instalator.</p>
+          <div class="grid tiles-grid" style="margin-top:22px">
+            <div class="card tile"><h3>🧾 Pismo do zarządcy</h3><p class="muted">Gotowy szablon DOCX na podstawie Twoich danych.</p></div>
+            <div class="card tile"><h3>💧 Straty CWU</h3><p class="muted">Prosty kalkulator: ile i gdzie ucieka ciepło.</p></div>
+            <div class="card tile"><h3>📉 Oszczędności</h3><p class="muted">Scenariusze: regulacja, izolacja, harmonogramy.</p></div>
+          </div>
+        </div>
+
+        <!-- WSPÓLNOTY / SPÓŁDZIELNIE -->
+        <div id="h-wspolnota" class="aud-block hide">
+          <h1>Kontrola strat i mocy w skali budynku</h1>
+          <p class="lead">Moduły dla zarządców: profil dobowy/tygodniowy, koszty pomp, warianty izolacji z ROI i paybackiem, gotowe raporty.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
+            <button id="btnOpen2" class="btn btn-primary">Uruchom moduł Zarządcy</button>
+            <a class="btn btn-ghost" href="#cennik">Cennik i wdrożenie</a>
+          </div>
+          <div class="grid tiles-grid" style="margin-top:22px">
+            <div class="card tile"><h3>📊 Dashboard</h3><p class="muted">Straty cyrkulacji, godziny pracy, koszt GJ/kWh.</p></div>
+            <div class="card tile"><h3>🧱 Warianty izolacji</h3><p class="muted">U/λ,t,D0 → koszt, oszczędność, ROI.</p></div>
+            <div class="card tile"><h3>📄 Raporty DOCX/PDF</h3><p class="muted">Wnioski techniczne + załączniki dla rady i mieszkańców.</p></div>
+          </div>
+        </div>
+
+        <!-- AUDYTOR -->
+        <div id="h-audytor" class="aud-block hide">
+          <h1>Audyt CWU na poziomie eksperckim, bez Excela</h1>
+          <p class="lead">Profil miesięczny ΔT, Rsi/Rse (αi/αe), liczenie q′ z U lub (λ,t,D0), warianty z eksportem XLSX/PDF/DOCX i API do integracji.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
+            <button id="btnOpen3" class="btn btn-primary">Otwórz tryb Audytora</button>
+            <a class="btn btn-ghost" href="#kontakt">Poproś o wersję PRO</a>
+          </div>
+        </div>
+
+        <!-- POZIOM EKSPERDZKI -->
+        <div id="h-expert" class="aud-block hide">
+          <h1>Poziom eksperdzki: q′, Rsi/Rse, harmonogramy, warianty</h1>
+          <p class="lead">Włącz/wyłącz Rsi/Rse, ustaw αi/αe, importuj projekty *.cwu.json, generuj zalecenia i analizy ROI dla 3 wariantów izolacji.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
+            <button id="btnOpen4" class="btn btn-primary">Uruchom tryb Ekspert</button>
+            <a class="btn btn-ghost" href="#manifest">Zobacz manifest metody</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card media">
+        <img src="https://images.unsplash.com/photo-1558002038-1055907df827?q=80&w=1400&auto=format&fit=crop" alt="Panel aplikacji"/>
+      </div>
+    </div>
+  </section>
+
+  <!-- JAK TO DZIAŁA -->
+  <section class="how">
+    <div class="wrap">
+      <h2>Jak to działa?</h2>
+      <div class="grid how-grid">
+        <div class="card step"><h4>1. Parametry</h4><p class="muted">Zużycia, temperatury, izolacja, harmonogramy, ceny GJ/kWh.</p></div>
+        <div class="card step"><h4>2. Obliczenia</h4><p class="muted">Straty cyrkulacji q′, energia [kWh/GJ], koszty, pompy, warianty.</p></div>
+        <div class="card step"><h4>3. Raport</h4><p class="muted">DOCX/PDF z wnioskami: ROI, payback, rekomendacje techniczne.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CENNIK -->
+  <section id="cennik" class="pricing">
+    <div class="wrap">
+      <h2>Cennik</h2>
+      <div class="grid price-grid">
+        <div class="card price">
+          <h3>Mieszkaniec</h3>
+          <p class="muted">Kalkulator + pismo DOCX.</p>
+          <p><strong>0 zł</strong> (beta)</p>
+          <a class="btn btn-ghost" href="#kontakt">Zapytaj</a>
+        </div>
+        <div class="card price">
+          <h3>Pro <span class="badge">dla Zarządców</span></h3>
+          <p class="muted">Warianty, raporty, projekty *.cwu.json.</p>
+          <p><strong>— zł/mc</strong> (ustalimy)</p>
+          <a class="btn btn-primary" href="/downloads/PROF-INSTAL-Setup.exe">Pobierz i przetestuj</a>
+        </div>
+        <div class="card price">
+          <h3>Audytor/Enterprise</h3>
+          <p class="muted">Integracje, SLA, szkolenia.</p>
+          <p><strong>Wycena indywidualna</strong></p>
+          <a class="btn btn-ghost" href="#kontakt">Porozmawiajmy</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MANIFEST -->
+  <section id="manifest" class="manifesto">
+    <div class="wrap">
+      <h2>Manifest PROF INSTAL</h2>
+
+      <!-- WSTĘP — DIAGNOZA -->
+      <div class="card" style="padding:18px;margin-bottom:16px">
+        <h3>Wstęp — diagnoza problemu</h3>
+        <p class="muted" style="line-height:1.7">
+          W sercu każdego osiedla działa system CWU projektowany często dekady temu. To „cichy pożeracz"
+          energii i budżetów: cyrkulacja bez regulacji, nieciągła izolacja, brak harmonogramów, przegrzewy.
+          Efekt: realne straty ciepła i pieniędzy, rozmyte w rozliczeniach.
+        </p>
+        <p class="muted" style="line-height:1.7">
+          W kryzysie energetycznym i przy rosnących wymaganiach klimatycznych nie stać nas na domysły —
+          potrzebna jest systemowa modernizacja CWU oparta na danych i powtarzalnym modelu.
+        </p>
+      </div>
+
+      <!-- CEL — MISJA -->
+      <div class="card" style="padding:18px;margin-bottom:16px">
+        <h3>Cel manifestu — narodowa misja</h3>
+        <ul class="muted" style="line-height:1.8">
+          <li><strong>Mieszkańcy:</strong> uczciwe rachunki, koniec dopłat do strat „z powietrza".</li>
+          <li><strong>Wspólnoty i spółdzielnie:</strong> decyzje na liczbach (kWh/GJ, zł, ROI, payback) — nie na intuicji.</li>
+          <li><strong>Audytorzy i JST:</strong> spójny, replikowalny model i dokumentacja możliwa do weryfikacji.</li>
+        </ul>
+      </div>
+
+      <!-- SKALA PROBLEMU -->
+      <div class="card" style="padding:18px;margin-bottom:16px">
+        <h3>Skala problemu — koszt dla kraju</h3>
+        <div class="stats">
+          <div class="kpi">
+            <h3 id="kpi-koszt">—</h3>
+            <p>Szacunkowy koszt strat CWU [zł/rok]</p>
+          </div>
+          <div class="kpi">
+            <h3 id="kpi-energia">—</h3>
+            <p>Utracona energia [GJ/rok]</p>
+          </div>
+          <div class="kpi">
+            <h3 id="kpi-co2">—</h3>
+            <p>Emisje powiązane [t CO₂/rok]</p>
+          </div>
+        </div>
+
+        <div class="calc">
+          <div class="field">
+            <label>Budynki wielorodzinne w PL (szacunek)</label>
+            <input id="in-bud" type="number" min="1" value="120000">
+          </div>
+          <div class="field">
+            <label>Strata ciepła na budynek [GJ/rok]</label>
+            <input id="in-gj" type="number" min="1" value="180">
+          </div>
+          <div class="field">
+            <label>Cena ciepła [zł/GJ]</label>
+            <input id="in-cena" type="number" min="1" step="0.1" value="60">
+          </div>
+          <div class="field">
+            <label>Emisyjność miksu ciepła [kg CO₂/GJ]</label>
+            <input id="in-ef" type="number" min="0" step="1" value="80">
+          </div>
+        </div>
+        <p class="note">
+          Liczby to <em>konfigurowalne</em> założenia do szybkiej estymacji. Realne wartości zależą od: stanu izolacji,
+          regulacji cyrkulacji, profilu godzinowego, miksu nośników ciepła itp. Manifest pokazuje rząd wielkości.
+        </p>
+      </div>
+
+      <!-- ROZWIĄZANIE -->
+      <div class="card" style="padding:18px;margin-bottom:16px">
+        <h3>Co oferujemy — rozwiązanie technologiczne</h3>
+        <ul class="muted" style="line-height:1.8">
+          <li><strong>Analiza:</strong> dane zużycia, temperatur, kosztów; model q′ z U lub (λ,t,D0), Rsi/Rse (αi/αe).</li>
+          <li><strong>Wykrywanie strat:</strong> cyrkulacja, izolacja, harmonogramy, przegrzewy, pompy.</li>
+          <li><strong>Warianty & ROI:</strong> oszczędność [zł/rok], CAPEX, payback, raporty DOCX/PDF.</li>
+          <li><strong>Replikowalność:</strong> projekty *.cwu.json i porównania przed/po.</li>
+        </ul>
+      </div>
+
+      <!-- ZASADY -->
+      <div class="card" style="padding:18px">
+        <h3>Nasze zasady</h3>
+        <ol class="muted" style="line-height:1.8">
+          <li><strong>Zero zgadywania.</strong> Najpierw pomiar i model, potem decyzja.</li>
+          <li><strong>Transparentność.</strong> Ten sam silnik obliczeń dla wszystkich interesariuszy.</li>
+          <li><strong>Najpierw regulacja.</strong> Harmonogramy i balans → dopiero potem CAPEX.</li>
+          <li><strong>Automatyzacja.</strong> Jedno kliknięcie: warianty, rekomendacje, raport.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- KONTAKT -->
+  <section id="kontakt" class="contact">
+    <div class="wrap">
+      <h2>Kontakt</h2>
+      <div class="row">
+        <div class="card box">
+          <p class="muted">Masz pytanie, chcesz demo lub ofertę?</p>
+          <p><strong>E-mail:</strong> <a id="mailto" href="mailto:support@profinstal.info">support@profinstal.info</a><br>
+             <strong>Telefon:</strong> <a id="tel" href="tel:+48">+48 …</a></p>
+        </div>
+        <div class="card box">
+          <form action="mailto:support@profinstal.info" method="post" enctype="text/plain">
+            <label>Imię i nazwisko</label><input class="input" name="name" required>
+            <label>E-mail</label><input class="input" name="email" type="email" required>
+            <label>Wiadomość</label><textarea class="input" name="message" rows="5" required></textarea>
+            <button class="btn btn-primary" type="submit">Wyślij</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STOPKA -->
+  <footer class="footer"><div class="wrap muted">© <span id="year"></span> PROF INSTAL — profinstal.info</div></footer>
+
+  <!-- PŁYWAJĄCE SKRÓTY -->
+  <div class="float">
+    <a class="iconbtn" href="#top" title="Góra">⬆️</a>
+    <a class="iconbtn" href="#kontakt" title="Kontakt">✉️</a>
+  </div>
+
+  <script>
+    // Motyw
+    const tbtn = document.getElementById('themeToggle');
+    const current = localStorage.getItem('pi-theme');
+    if(current){ document.documentElement.setAttribute('data-theme', current); }
+    tbtn.addEventListener('click', ()=>{
+      const next = (document.documentElement.getAttribute('data-theme') === 'light') ? '' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      if(next) localStorage.setItem('pi-theme', next); else localStorage.removeItem('pi-theme');
+    });
+
+    // Konfiguracja linków + deep link
+    (function(){
+      const cfg = window.PI_CONFIG || {};
+      const btnDownload = document.getElementById('btnDownload');
+      if(btnDownload && cfg.downloadUrl) btnDownload.href = cfg.downloadUrl;
+
+      const mail = document.getElementById('mailto'); if(cfg.email){ mail.href = 'mailto:'+cfg.email; mail.textContent = cfg.email; }
+      const tel = document.getElementById('tel'); if(cfg.phone){ tel.href = 'tel:'+cfg.phone.replace(/\s+/g,''); tel.textContent = cfg.phone; }
+
+      function wireOpen(btnId){
+        const el = document.getElementById(btnId); if(!el) return;
+        el.addEventListener('click', ()=>{
+          const url = (cfg.protocol || 'cwuapp://') + 'open';
+          let launched = false;
+          const t = setTimeout(()=>{ if(!launched && cfg.downloadUrl) window.location.href = cfg.downloadUrl; }, 1200);
+          const onBlur = () => { launched = true; clearTimeout(t); window.removeEventListener('blur', onBlur); };
+          window.addEventListener('blur', onBlur);
+          const iframe = document.createElement('iframe'); iframe.style.display='none'; iframe.src = url; document.body.appendChild(iframe);
+          setTimeout(()=>{ try{ document.body.removeChild(iframe); }catch(e){} }, 3000);
+        });
+      }
+      wireOpen('btnOpen'); wireOpen('btnOpen2'); wireOpen('btnOpen3'); wireOpen('btnOpen4');
+    })();
+
+    // Rok
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Przełącznik grupy docelowej
+    const buttons = document.querySelectorAll('.seg button');
+    const blocks = {
+      mieszkaniec: document.getElementById('h-mieszkaniec'),
+      wspolnota: document.getElementById('h-wspolnota'),
+      audytor: document.getElementById('h-audytor'),
+      expert: document.getElementById('h-expert')
+    };
+    buttons.forEach(b=>{
+      b.addEventListener('click', ()=>{
+        buttons.forEach(x=>{ x.classList.remove('active'); x.setAttribute('aria-selected','false'); });
+        b.classList.add('active'); b.setAttribute('aria-selected','true');
+        const k = b.getAttribute('data-audience');
+        Object.entries(blocks).forEach(([key,node])=> node.classList.toggle('hide', key!==k));
+      });
+    });
+
+    // Estymator skali krajowej (manifest)
+    function fmtMoney(x){ return (x).toLocaleString('pl-PL',{maximumFractionDigits:0}); }
+    function fmtGJ(x){ return (x).toLocaleString('pl-PL',{maximumFractionDigits:0}); }
+    function fmtTons(x){ return (x/1000).toLocaleString('pl-PL',{maximumFractionDigits:0}); }
+
+    function calcNational(){
+      const bud = Number(document.getElementById('in-bud')?.value || 0);
+      const gjB = Number(document.getElementById('in-gj')?.value || 0);
+      const cena = Number(document.getElementById('in-cena')?.value || 0);
+      const ef = Number(document.getElementById('in-ef')?.value || 0); // kg CO2/GJ
+
+      const GJ = bud * gjB;
+      const koszt = GJ * cena;
+      const co2kg = GJ * ef;
+
+      const elK = document.getElementById('kpi-koszt');
+      const elE = document.getElementById('kpi-energia');
+      const elC = document.getElementById('kpi-co2');
+      if(elK) elK.textContent = fmtMoney(koszt) + ' zł';
+      if(elE) elE.textContent = fmtGJ(GJ) + ' GJ';
+      if(elC) elC.textContent = fmtTons(co2kg) + ' t CO₂';
+    }
+    ['in-bud','in-gj','in-cena','in-ef'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.addEventListener('input', calcNational);
+    });
+    window.addEventListener('DOMContentLoaded', calcNational);
+  </script>
+</body>
+</html>

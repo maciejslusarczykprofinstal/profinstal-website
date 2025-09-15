@@ -1,0 +1,83 @@
+
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Wyniki — PROF INSTAL</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header>
+      <h1>Wyniki obliczeń CWU</h1>
+      <p>Data: {{ today }}</p>
+    </header>
+    <main>
+      <section class="kpi">
+        <div class="kpi-card">
+          <div class="kpi-title">Sprawność instalacji</div>
+          <div class="kpi-value">{{ (res.eta*100)|round(1) }} %</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Strata na 1 m³</div>
+          <div class="kpi-value">{{ res.loss_per_m3|round(2) }} zł</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Twoja strata / miesiąc</div>
+          <div class="kpi-value">{{ res.loss_flat_m|round(2) }} zł</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Twoja strata / rok</div>
+          <div class="kpi-value">{{ (res.loss_flat_m*12)|round(0) }} zł</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Wzory i wyniki</h2>
+        <pre>
+Q[GJ/m³] = (1000·4,19·ΔT) / 1 000 000
+koszt_teor [zł/m³] = Q · cena_ciepła_brutto [zł/GJ]
+η = koszt_teor / stawka_rachunkowa
+        </pre>
+        <p>Rachunek: {{ "%.2f"|format(res.bill) }} zł/m³ | Ciepło brutto: {{ "%.2f"|format(res.price_GJ_brutto) }} zł/GJ | ΔT: {{ "%.0f"|format(res.dT) }}°C</p>
+        <p>Q_teor: {{ "%.5f"|format(res.q_per_m3) }} GJ/m³ → koszt_teor: {{ "%.2f"|format(res.cost_theor) }} zł/m³ | η: {{ "%.1f"|format(res.eta*100) }}%</p>
+        <p>Strata: {{ "%.2f"|format(res.loss_per_m3) }} zł/m³</p>
+        <p>Budynek łącznie: {{ "{:,.2f}".format(res.loss_build_m) }} zł/m‑c; {{ "{:,.2f}".format(res.loss_build_y) }} zł/rok</p>
+      </section>
+
+      <section class="card">
+        <h2>Scenariusze modernizacji</h2>
+        <ul>
+          <li>70%: koszt {{ "%.2f"|format(res.cost70) }} zł/m³ → oszcz. {{ "%.2f"|format(res.save70_m3) }} zł/m³ | budynek {{ "{:,.2f}".format(res.save70_build_m) }} zł/m‑c; {{ "{:,.2f}".format(res.save70_build_y) }} zł/rok</li>
+          <li>80%: koszt {{ "%.2f"|format(res.cost80) }} zł/m³ → oszcz. {{ "%.2f"|format(res.save80_m3) }} zł/m³ | budynek {{ "{:,.2f}".format(res.save80_build_m) }} zł/m‑c; {{ "{:,.2f}".format(res.save80_build_y) }} zł/rok</li>
+        </ul>
+      </section>
+
+      <form action="{{ url_for('export_docx') }}" method="post" class="inline-form">
+        <input type="hidden" name="bill" value="{{ res.bill }}">
+        <input type="hidden" name="city" value="">
+        <input type="hidden" name="heat_price" value="{{ res.heat_price }}">
+        <input type="hidden" name="unit" value="{{ res.unit }}">
+        <input type="hidden" name="vat" value="{{ res.vat }}">
+        <input type="hidden" name="month_m3" value="{{ res.month_m3 }}">
+        <input type="hidden" name="dT" value="{{ res.dT }}">
+        <input type="hidden" name="units" value="{{ res.units }}">
+        <button type="submit">Pobierz DOCX</button>
+      </form>
+
+      <form action="{{ url_for('export_pdf') }}" method="post" class="inline-form">
+        <input type="hidden" name="bill" value="{{ res.bill }}">
+        <input type="hidden" name="city" value="">
+        <input type="hidden" name="heat_price" value="{{ res.heat_price }}">
+        <input type="hidden" name="unit" value="{{ res.unit }}">
+        <input type="hidden" name="vat" value="{{ res.vat }}">
+        <input type="hidden" name="month_m3" value="{{ res.month_m3 }}">
+        <input type="hidden" name="dT" value="{{ res.dT }}">
+        <input type="hidden" name="units" value="{{ res.units }}">
+        <button type="submit">Pobierz PDF</button>
+      </form>
+
+      <p><a href="{{ url_for('index') }}">← Wróć do formularza</a></p>
+    </main>
+  </body>
+</html>

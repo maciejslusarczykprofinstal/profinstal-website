@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <link rel="preload" href="/static/img/LOGO119x119.png" as="image" type="image/png">
+  <link rel="preload" href="/static/img/LOGO512x512.png" as="image" type="image/png">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/LOGO119x119.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/img/LOGO512x512.png">
+  <link rel="apple-touch-icon" href="/static/img/LOGO512x512.png">
+  <meta property="og:image" content="/static/img/LOGO512x512.png">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PROF INSTAL — Asystent CWU • Obliczenia, Raporty, Wnioski</title>
+  <meta name="description" content="Asystent CWU dla mieszkańców, wspólnot/spółdzielni i audytorów. Oblicz straty, moce i generuj raporty DOCX jednym kliknięciem." />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <meta name="theme-color" content="#0b1220">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="PROF INSTAL — Asystent CWU">
+  <meta property="og:description" content="Obliczenia, Raporty, Wnioski dla CWU">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://profinstal.info">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PROF INSTAL — Asystent CWU">
+  <meta name="twitter:description" content="Obliczenia, Raporty, Wnioski dla CWU">
+
+  <style>
+    :root{--bg:#0b1220;--text:#e2e8f0;--muted:#94a3b8;--surface:#0f172a;--line:rgba(148,163,184,.18);--brand:#10b981;--brand2:#22d3ee;--accent:#22d3ee}
+    [data-theme="light"]{--bg:#f8fafc;--text:#0b1220;--muted:#475569;--surface:#ffffff;--line:rgba(2,6,23,.12);--brand:#0ea5e9;--brand2:#22c55e;--accent:#0ea5e9}
+  *,*::before,*::after{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{padding-top:64px;}
+    body{font-family:system-ui,Segoe UI,Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    a{color:inherit} .wrap{max-width:1120px;margin:auto;padding:0 20px}
+    .btn{appearance:none;border:0;border-radius:14px;padding:14px 18px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all 0.2s ease;position:relative}
+    .btn:hover{transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+    .btn-primary{background:linear-gradient(90deg,var(--brand),var(--brand2));color:#001b18;box-shadow:0 10px 30px rgba(2,6,23,.35)}
+    .btn-primary:hover{box-shadow:0 15px 40px rgba(2,6,23,.45)}
+    .btn-ghost{background:rgba(148,163,184,.1);border:1px solid var(--line);color:var(--text)}
+    .btn-ghost:hover{background:rgba(148,163,184,.15)}
+    .loading{pointer-events:none}
+    .loading::after{content:'';position:absolute;width:16px;height:16px;border:2px solid transparent;border-top:2px solid currentColor;border-radius:50%;animation:spin 1s linear infinite;margin-left:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+    .seg button{background:transparent;border:0;padding:10px 14px;color:var(--muted);cursor:pointer}
+    .seg button.active{background:color-mix(in oklab,var(--brand),transparent 88%);color:var(--text)}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:20px}
+    .muted{color:var(--muted)} .grid{display:grid;gap:18px}
+    .nav {
+      position: sticky;
+      top: 0;
+      backdrop-filter: saturate(140%) blur(12px);
+      background: color-mix(in oklab,var(--bg),transparent 16%);
+      border-bottom: 1px solid var(--line);
+      z-index: 40;
+      box-shadow: 0 2px 16px rgba(34,211,238,0.08);
+      border-radius: 0 0 18px 18px;
+    }
+    .nav .wrap {
+      max-width: 980px;
+      margin: auto;
+      padding: 0 18px;
+    }
+    .nav .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0 8px 0;
+      min-height: 64px;
+    }
+    .brand-badge {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 22px 8px 12px;
+      color: var(--muted);
+      font-weight: 800;
+      background: rgba(16,185,129,0.10);
+      box-shadow: 0 2px 8px rgba(34,211,238,0.08);
+    }
+    .brand-logo {
+  height: 40px;
+  width: auto;
+  max-width: 48px;
+  min-width: 32px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-right: 0;
+  display: inline-block;
+  opacity: 1;
+    }
+    @media (max-width: 600px) {
+      .nav .row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 8px 0 4px 0;
+        min-height: 48px;
+      }
+      .brand-badge {
+        padding: 8px 12px;
+        font-size: 1em;
+      }
+      .brand-logo {
+        height: 38px;
+        max-width: 38px;
+      }
+    }
+    .hero-logo{height:300px;width:auto;object-fit:contain;max-width:100%}
+    @media (max-width:600px){.hero-logo{height:140px;max-width:80vw;width:auto;}}
+    .hero-logo {
+  height: 180px;
+  width: auto;
+  max-width: 320px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  opacity: 1;
+    }
+    .hero{padding:60px 0;background:
+      radial-gradient(1200px 600px at 80% -10%,color-mix(in oklab,var(--accent),transparent 75%),transparent),
+      radial-gradient(1000px 500px at -10% 10%,color-mix(in oklab,var(--brand),transparent 78%),transparent),
+      var(--bg)}
+    .hero h1{font-size:42px;line-height:1.1;margin:10px 0 10px}
+    .hero p.lead{font-size:18px;color:color-mix(in oklab,var(--text),#000 28%);max-width:70ch}
+    .hero-grid{display:grid;gap:28px;grid-template-columns:1.2fr .8fr;align-items:center}
+    @media (max-width:900px){.hero-grid{grid-template-columns:1fr}}
+    .tiles{padding:44px 0;background:color-mix(in oklab,var(--bg),#000 2%)} .tiles-grid{grid-template-columns:repeat(3,1fr)}
+    @media (max-width:900px){.tiles-grid{grid-template-columns:1fr}}
+    .tile{padding:18px}
+    .how{padding:44px 0} .how-grid{grid-template-columns:repeat(3,1fr)} @media (max-width:900px){.how-grid{grid-template-columns:1fr}} .how .step{padding:18px}
+    .pricing{padding:44px 0;background:color-mix(in oklab,var(--bg),#000 2%)} .price-grid{grid-template-columns:repeat(3,1fr)} @media (max-width:900px){.price-grid{grid-template-columns:1fr}} .price{padding:18px}
+    .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:var(--brand);color:#01261f;font-weight:800;font-size:12px}
+    .contact{padding:44px 0} .row{display:grid;gap:16px;grid-template-columns:1fr 1fr} @media (max-width:900px){.row{grid-template-columns:1fr}}
+    .box{padding:18px} .input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+    label{font-size:14px;color:var(--muted);margin:6px 0;display:block}
+    .manifesto{padding:44px 0} .footer{padding:24px 0;border-top:1px solid var(--line);text-align:center}
+    .float{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:10px}
+    .iconbtn{border-radius:999px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--line);cursor:pointer;transition:all 0.2s ease}
+    .iconbtn:hover{background:rgba(148,163,184,.1);transform:scale(1.05)}
+    .iconbtn:focus{outline:2px solid var(--brand);outline-offset:2px}
+    .media{overflow:hidden;border-radius:22px} .media img{width:100%;display:block;height:auto;object-fit:cover}
+    .hide{display:none!important}
+    .error{color:#ef4444;font-size:14px;margin-top:4px}
+    .success{color:#22c55e;font-size:14px;margin-top:4px}
+    .fade-in{animation:fadeIn 0.3s ease-in-out}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .input:focus{outline:2px solid var(--brand);outline-offset:2px}
+    .skip-link{position:absolute;top:-40px;left:6px;background:var(--brand);color:#001b18;padding:8px;z-index:100;text-decoration:none;border-radius:4px}
+    .skip-link:focus{top:6px}
+  </style>
+</head>
+
+<body>
+  <!-- Logo in nav, also visible in hero below -->
+  <a href="#main-content" class="skip-link">Przejdź do głównej treści</a>
+  
+  <script>
+    // Konfiguracja
+    window.PI_CONFIG = {
+      protocol: 'cwuapp://open',
+    downloadUrl: "",
+      email: 'support@profinstal.info',
+      phone: '+48 000 000 000'
+    };
+
+    // Utilities
+    window.PIUtils = {
+      showError: function(element, message) {
+        this.clearError(element);
+        const newError = document.createElement('div');
+        newError.className = 'error';
+        newError.textContent = message;
+        newError.setAttribute('role', 'alert');
+        element.parentNode.insertBefore(newError, element.nextSibling);
+      },
+      
+      clearError: function(element) {
+        const errorEl = element.nextElementSibling;
+        if (errorEl && errorEl.classList.contains('error')) {
+          errorEl.remove();
+        }
+      },
+
+      setLoading: function(button, loading) {
+        if (loading) {
+          button.classList.add('loading');
+          button.disabled = true;
+          button.setAttribute('aria-busy', 'true');
+        } else {
+          button.classList.remove('loading');
+          button.disabled = false;
+          button.setAttribute('aria-busy', 'false');
+        }
+      },
+
+      debounce: function(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+    };
+  </script>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="wrap">
+      <div class="row">
+        <span class="brand-badge">
+          <img src="/static/img/LOGO512x512.png" alt="PROF INSTAL" class="brand-logo" loading="eager">
+          <span style="font-size:1.18em;letter-spacing:0.5px;">PROF INSTAL • Asystent CWU</span>
+        </span>
+        <div style="display:flex;gap:10px;align-items:center">
+          <a href="#manifest" class="btn btn-ghost">Manifest</a>
+          <a href="#kontakt" class="btn btn-ghost">Kontakt</a>
+          <button id="themeToggle" class="iconbtn" title="Przełącz motyw" aria-label="Przełącz motyw">🌓</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO z LOGO na LEWO -->
+  <section class="hero" id="main-content">
+    <div class="wrap hero-grid" style="padding-top:32px;">
+      <div style="display:flex;justify-content:center;align-items:center;margin-bottom:32px;">
+  <img src="/static/img/LOGO512x512.png" alt="PROF INSTAL - Logo aplikacji do analizy ciepłej wody użytkowej" class="hero-logo" loading="eager" style="max-width:320px;width:100%;height:auto;box-shadow:0 8px 40px 0 rgba(16,185,129,0.13);">
+      </div>
+      <!-- TREŚĆ HERO -->
+      <div>
+        <div class="seg" role="tablist" aria-label="Grupa docelowa">
+          <button class="active" data-audience="mieszkaniec" role="tab" aria-selected="true" tabindex="0">Mieszkańcy</button>
+          <button data-audience="wspolnota" role="tab" aria-selected="false" tabindex="-1">Wspólnoty/Spółdzielnie</button>
+          <button data-audience="audytor" role="tab" aria-selected="false" tabindex="-1">Audytorzy</button>
+          <button data-audience="expert" role="tab" aria-selected="false" tabindex="-1">Poziom ekspercki</button>
+        </div>
+
+        <!-- treści per personę -->
+        <div id="h-mieszkaniec" class="aud-block">
+          <h1>Niższe rachunki za ciepłą wodę bez zgadywania</h1>
+          <p class="lead">Wpisz swoje parametry, wygeneruj pismo do zarządcy i pokaż twarde liczby: straty na cyrkulacji, potencjalne oszczędności i jasne wnioski.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
+            <a href="/mieszkancy" class="btn btn-primary" id="btnOpen">Wprowadź dane z rachunku</a>
+          </div>
+          <p class="muted" style="margin-top:8px">Masz aplikację? <code>Uruchom</code> odpali ją od razu. Nie masz? Pobierze instalator.</p>
+          <div class="grid tiles-grid" style="margin-top:22px">
+            <div class="card tile"><h3>🧾 Pismo do zarządcy</h3><p class="muted">Gotowy szablon DOCX na podstawie Twoich danych.</p></div>
+            <div class="card tile"><h3>💧 Straty CWU</h3><p class="muted">Prosty kalkulator: ile i gdzie ucieka ciepło.</p></div>
+            <div class="card tile"><h3>📉 Oszczędności</h3><p class="muted">Scenariusze: regulacja, izolacja, harmonogramy.</p></div>
+          </div>
+        </div>
+
+        <div id="h-wspolnota" class="aud-block hide">
+          <h1>Kontrola strat i mocy w skali budynku</h1>
+          <p class="lead">Moduły dla zarządców: profil dobowy/tygodniowy, koszty pomp, warianty izolacji z ROI i paybackiem, gotowe raporty.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
+            <button id="btnOpen2" class="btn btn-primary">Uruchom moduł Zarządcy</button>
+            <a class="btn btn-ghost" href="#cennik">Cennik i wdrożenie</a>
+          </div>
+          <div class="grid tiles-grid" style="margin-top:22px">
+            <div class="card tile"><h3>📊 Dashboard</h3><p class="muted">Straty cyrkulacji, godziny pracy, koszt GJ/kWh.</p></div>
+            <div class="card tile"><h3>🧱 Warianty izolacji</h3><p class="muted">U/λ,t,D0 → koszt, oszczędność, ROI.</p></div>
+            <div class="card tile"><h3>📄 Raporty DOCX/PDF</h3><p class="muted">Wnioski techniczne + załączniki dla rady i mieszkańców.</p></div>
+          </div>
+        </div>
+
+        <div id="h-audytor" class="aud-block hide">
+          <h1>Audyt CWU na poziomie eksperckim, bez Excela</h1>
+          <p class="lead">Profil miesięczny ΔT, Rsi/Rse (αi/αe), liczenie q′ z U lub (λ,t,D0), warianty z eksportem XLSX/PDF/DOCX i API do integracji.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
+            <a href="/3_Audytorzy.html" target="_blank" rel="noopener" class="btn btn-primary" id="openAudytorzy">
+              Otwórz tryb Audytora
+            </a>
+            <a class="btn btn-ghost" href="#kontakt">Poproś o wersję PRO</a>
+          </div>
+        </div>
+
+        <div id="h-expert" class="aud-block hide">
+          <h1>Poziom ekspercki: q′, Rsi/Rse, harmonogramy, warianty</h1>
+          <p class="lead">Włącz/wyłącz Rsi/Rse, ustaw αi/αe, importuj projekty *.cwu.json, generuj zalecenia i analizy ROI dla 3 wariantów izolacji.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
+            <button id="btnOpen4" class="btn btn-primary">Uruchom tryb Ekspert</button>
+            <a class="btn btn-ghost" href="#manifest">Zobacz manifest metody</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- JAK TO DZIAŁA (wspólne) -->
+  <section class="how">
+    <div class="wrap">
+      <h2>Jak to działa?</h2>
+      <div class="grid how-grid">
+        <div class="card step"><h4>1. Parametry</h4><p class="muted">Zużycia, temperatury, izolacja, harmonogramy, ceny GJ/kWh.</p></div>
+        <div class="card step"><h4>2. Obliczenia</h4><p class="muted">Straty cyrkulacji q′, energia [kWh/GJ], koszty, pompy, warianty.</p></div>
+        <div class="card step"><h4>3. Raport</h4><p class="muted">DOCX/PDF z wnioskami: ROI, payback, rekomendacje techniczne.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CENNIK -->
+  <section id="cennik" class="pricing">
+    <div class="wrap">
+      <h2>Cennik</h2>
+      <div class="grid price-grid">
+        <div class="card price">
+          <h3>Mieszkaniec</h3>
+          <p class="muted">Kalkulator + pismo DOCX.</p>
+          <p><strong>0 zł</strong> (beta)</p>
+          <a class="btn btn-ghost" href="#kontakt">Zapytaj</a>
+        </div>
+        <div class="card price">
+          <h3>Pro <span class="badge">dla Zarządców</span></h3>
+          <p class="muted">Warianty, raporty, projekty *.cwu.json.</p>
+          <p><strong>— zł/mc</strong> (ustalimy)</p>
+          <a class="btn btn-primary" href="#">Pobierz i przetestuj</a>
+        </div>
+        <div class="card price">
+          <h3>Audytor/Enterprise</h3>
+          <p class="muted">Integracje, SLA, szkolenia.</p>
+          <p><strong>Wycena indywidualna</strong></p>
+          <a class="btn btn-ghost" href="#kontakt">Porozmawiajmy</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MANIFEST MARKI / METODY -->
+  <section id="manifest" style="padding:56px 20px;background:#0e1528;color:#e2e8f0">
+    <div style="max-width:1100px;margin:auto">
+      <h2 style="margin:0 0 10px">PROF INSTAL — manifest</h2>
+      <p style="color:#94a3b8;margin:0 0 18px">
+        Ciepła woda w blokach nie powinna być loterią. To inżynieria, którą da się policzyć i naprawić.
+        Łączymy rzetelne obliczenia, czytelne raporty i wspólny język: dla mieszkańców, zarządców oraz samorządów.
+        Cel: <strong>mniej strat, niższe rachunki, czystsze powietrze</strong> — bez zgadywania.
+      </p>
+
+      <div id="dla-kogo" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0">
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(148,163,184,.15);border-radius:16px;padding:16px">
+          <h3 style="margin:0 0 6px">Dla Mieszkańców</h3>
+          <ul style="margin:0;padding-left:18px;color:#94a3b8">
+            <li>Pokazujemy skąd biorą się koszty CWU i co je podbija.</li>
+            <li>Konkrety: co zmienić, by płacić mniej — z uzasadnieniem.</li>
+            <li>Jasne pisma/raporty DOCX do spółdzielni.</li>
+          </ul>
+        </div>
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(148,163,184,.15);border-radius:16px;padding:16px">
+          <h3 style="margin:0 0 6px">Dla Zarządców</h3>
+          <ul style="margin:0;padding-left:18px;color:#94a3b8">
+            <li>Obliczenia: moc zamówiona, straty cyrkulacji, bufory, warianty „co-jeśli".</li>
+            <li>Raporty do zarządu/lustracji z podstawą normową.</li>
+            <li>Priorytety modernizacji wg efektu (zł/kW, zł/m³).</li>
+          </ul>
+        </div>
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(148,163,184,.15);border-radius:16px;padding:16px">
+          <h3 style="margin:0 0 6px">Dla Miast i Gmin</h3>
+          <ul style="margin:0;padding-left:18px;color:#94a3b8">
+            <li>Ujednolicone sprawozdania z budynków — jeden format.</li>
+            <li>Mapa hot-spotów strat i potencjału redukcji.</li>
+            <li>Załączniki do programów modernizacji i wniosków o finansowanie.</li>
+          </ul>
+        </div>
+      </div>
+
+      <section id="ekologia" style="margin:28px 0">
+        <h3 style="margin:0 0 6px">Dla Ekologii</h3>
+        <p style="color:#94a3b8;margin:0">
+          Najczystsza energia to ta, której nie zmarnowaliśmy. Redukujemy straty i niepotrzebnie zamawianą moc —
+          mniej spalania, mniej emisji. Komfort bez przegrzewania instalacji.
+        </p>
+      </section>
+
+      <section id="ile-tracimy" style="margin:28px 0">
+        <h3 style="margin:0 0 6px">Ile wszyscy tracimy?</h3>
+        <p style="color:#94a3b8;margin:0">
+          Straty są rozproszone: tu zawór, tam cyrkulacja, gdzie indziej „na wszelki wypadek" wyższa moc.
+          Dla jednego bloku to „trochę", ale po zsumowaniu osiedli i miast wychodzi <strong>duża, publiczna faktura</strong> —
+          płacą mieszkańcy, wspólnoty, samorządy i państwo. Pokazujemy <strong>gdzie</strong> i <strong>ile</strong> się marnuje
+          oraz <strong>co</strong> przyniesie największy efekt.
+        </p>
+      </section>
+
+      <section id="laczymy" style="margin:28px 0">
+        <h3 style="margin:0 0 6px">Co łączymy</h3>
+        <ul style="margin:0;padding-left:18px;color:#94a3b8">
+          <li><strong>Inżynierię</strong> (normy, wzory, dane)</li>
+          <li><strong>Język ludzi</strong> (prosto o kosztach i korzyściach)</li>
+          <li><strong>Wspólne raportowanie</strong> (budynek → osiedle → gmina)</li>
+          <li><strong>Proces</strong>: parametry → obliczenia → warianty → decyzja → wdrożenie → sprawdzenie efektu</li>
+        </ul>
+      </section>
+
+      <section id="jak-dziala" style="margin:28px 0">
+        <h3 style="margin:0 0 6px">Jak to działa (3 kroki)</h3>
+        <ol style="margin:0;padding-left:18px;color:#94a3b8">
+          <li>Zbieramy parametry budynku/instalacji + zużycia.</li>
+          <li>Liczymy: moce, straty, bufory, warianty „co-jeśli".</li>
+          <li>Wnioski i raporty (mieszkańcy, zarządcy, gminy) + gotowe pisma DOCX.</li>
+        </ol>
+      </section>
+
+      <section id="zasady" style="margin:28px 0">
+        <h3 style="margin:0 0 6px">Nasze zasady</h3>
+        <ul style="margin:0;padding-left:18px;color:#94a3b8">
+          <li><strong>Zero czarnej skrzynki</strong> — każde założenie jest jawne i edytowalne.</li>
+          <li><strong>Ścieżka audytu</strong> — da się odtworzyć cały tok obliczeń.</li>
+          <li><strong>Decyzje &gt; PDF</strong> — wskazujemy priorytety i spodziewany efekt, nie tylko tabelki.</li>
+          <li><strong>Dane należą do Was</strong> — eksport, kopia, usunięcie na życzenie.</li>
+        </ul>
+      </section>
+
+      <section id="cta-manifest" style="margin:28px 0">
+        <h3 style="margin:0 0 6px">Wezwanie do współpracy</h3>
+        <ul style="margin:0;padding-left:18px;color:#94a3b8">
+          <li><strong>Mieszkańcy:</strong> sprawdźcie, za co płacicie — i co można poprawić.</li>
+          <li><strong>Zarządcy:</strong> zamieńcie dyskusje na decyzje — na liczbach.</li>
+          <li><strong>Miasta i Gminy:</strong> zobaczcie potencjał oszczędności w skali i planujcie modernizacje tam, gdzie najbardziej się zwrócą.</li>
+        </ul>
+        <p style="margin:12px 0 0">
+          <em>PROF INSTAL — łączymy ludzi, budynki i dane, żeby woda była ciepła, a liczby chłodne.</em>
+        </p>
+      </section>
+
+      <div style="margin-top:22px;padding:12px 16px;border:1px solid rgba(148,163,184,.2);border-radius:12px;background:rgba(255,255,255,.03);color:#cbd5e1">
+        <strong>Mniej strat, niższe rachunki, czystsze powietrze.</strong> Dla mieszkańców, zarządców i gmin — jednym wspólnym językiem.
+      </div>
+    </div>
+  </section>
+
+  <!-- KONTAKT -->
+  <section id="kontakt" class="contact">
+    <div class="wrap">
+      <h2>Kontakt</h2>
+      <div class="row">
+        <div class="card box">
+          <p class="muted">Masz pytanie, chcesz demo lub ofertę?</p>
+          <p><strong>E-mail:</strong> <a id="mailto" href="mailto:support@profinstal.info">support@profinstal.info</a><br>
+             <strong>Telefon:</strong> <a id="tel" href="tel:+48">+48 …</a></p>
+        </div>
+        <div class="card box">
+          <form id="contactForm" action="mailto:support@profinstal.info" method="post" enctype="text/plain">
+            <label for="contact-name">Imię i nazwisko</label>
+            <input id="contact-name" class="input" name="name" required autocomplete="name">
+            
+            <label for="contact-email">E-mail</label>
+            <input id="contact-email" class="input" name="email" type="email" required autocomplete="email">
+            
+            <label for="contact-message">Wiadomość</label>
+            <textarea id="contact-message" class="input" name="message" rows="5" required></textarea>
+            
+            <button class="btn btn-primary" type="submit" aria-describedby="form-status">
+              <span class="sr-only">Wyślij formularz kontaktowy</span>
+              Wyślij
+            </button>
+            <div id="form-status" aria-live="polite"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STOPKA -->
+  <footer class="footer">
+    <div class="wrap muted" style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap">
+  <img src="/static/img/LOGO512x512.png" alt="PROF INSTAL" loading="eager" style="height:32px;width:32px;max-width:100%;opacity:0.8;margin-right:8px;vertical-align:middle;object-fit:contain;aspect-ratio:1/1;">
+      © <span id="year"></span> PROF INSTAL — profinstal.info
+    </div>
+  </footer>
+
+  <!-- PŁYWAJĄCE SKRÓTY -->
+  <div class="float">
+    <a class="iconbtn" href="#top" title="Góra">⬆️</a>
+    <a class="iconbtn" href="#kontakt" title="Kontakt">✉️</a>
+  </div>
+
+  <!-- PRZYCISK: uruchom aplikację -->
+  <a id="runApp" class="btn btn-primary" href="/mieszkancy">Uruchom aplikację</a>
+
+  <!-- (opcjonalnie) bezpośrednie pobranie -->
+  <a id="downloadApp" class="btn btn-ghost" href="/downloads/PROF_INSTAL_Setup.exe" style="margin-left:12px;" download>
+    Pobierz (Windows)
+  </a>
+
+  <script>
+  (function () {
+    const RUN_URL = 'profinstal://start';
+    const DOWNLOAD_URL = '/downloads/PROF_INSTAL_Setup.exe'; // dokładna ścieżka do pliku na serwerze
+    const T = 1200;
+    document.getElementById('runApp').addEventListener('click', function (e) {
+      e.preventDefault();
+      const t0 = Date.now();
+      location.href = RUN_URL;
+      setTimeout(function () {
+        if (Date.now() - t0 < T + 200) location.href = DOWNLOAD_URL;
+      }, T);
+    });
+  })();
+  </script>
+
+  <script>
+    // Motyw
+    const tbtn = document.getElementById('themeToggle');
+    const current = localStorage.getItem('pi-theme');
+    if(current){ 
+      document.documentElement.setAttribute('data-theme', current); 
+    }
+    
+    tbtn.addEventListener('click', ()=>{
+      try {
+        const next = (document.documentElement.getAttribute('data-theme') === 'light') ? '' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        if(next) {
+          localStorage.setItem('pi-theme', next); 
+        } else {
+          localStorage.removeItem('pi-theme');
+        }
+      } catch(e) {
+        console.warn('Theme switching failed:', e);
+      }
+    });
+
+    // Konfiguracja linków + deep link
+    (function(){
+      try {
+        const cfg = window.PI_CONFIG || {};
+        const btnDownload = document.getElementById('btnDownload');
+        if(btnDownload && cfg.downloadUrl) btnDownload.href = cfg.downloadUrl;
+
+        const mail = document.getElementById('mailto'); 
+        if(mail && cfg.email){ 
+          mail.href = 'mailto:'+cfg.email; 
+          mail.textContent = cfg.email; 
+        }
+        
+        const tel = document.getElementById('tel'); 
+        if(tel && cfg.phone){ 
+          tel.href = 'tel:'+cfg.phone.replace(/\s+/g,''); 
+          tel.textContent = cfg.phone; 
+        }
+
+        function wireOpen(btnId){
+          const el = document.getElementById(btnId); 
+          if(!el) return;
+          
+          el.addEventListener('click', (e)=>{
+            e.preventDefault();
+            window.PIUtils.setLoading(el, true);
+            
+            try {
+              const url = (cfg.protocol || 'cwuapp://') + 'open';
+              let launched = false;
+              
+              const cleanup = () => {
+                window.PIUtils.setLoading(el, false);
+                clearTimeout(fallbackTimer);
+                window.removeEventListener('blur', onBlur);
+              };
+              
+              const fallbackTimer = setTimeout(()=>{
+                if(!launched && cfg.downloadUrl) {
+                  window.location.href = cfg.downloadUrl;
+                }
+                cleanup();
+              }, 1500);
+              
+              const onBlur = () => { 
+                launched = true; 
+                cleanup();
+              };
+              
+              window.addEventListener('blur', onBlur);
+              
+              // Bezpieczniejsze podejście do deep linking
+              const link = document.createElement('a');
+              link.href = url;
+              link.style.display = 'none';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              
+            } catch(error) {
+              console.error('Deep link failed:', error);
+              window.PIUtils.setLoading(el, false);
+              if(cfg.downloadUrl) {
+                window.location.href = cfg.downloadUrl;
+              }
+            }
+          });
+        }
+        
+        wireOpen('btnOpen'); 
+  wireOpen('btnOpen2'); 
+  // wireOpen('btnOpen3'); 
+  wireOpen('btnOpen4');
+      } catch(e) {
+        console.error('Configuration failed:', e);
+      }
+    })();
+
+    // Rok
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Przełącznik grupy docelowej z poprawioną nawigacją klawiaturą
+    const buttons = document.querySelectorAll('.seg button');
+    const blocks = {
+      mieszkaniec: document.getElementById('h-mieszkaniec'),
+      wspolnota: document.getElementById('h-wspolnota'),
+      audytor: document.getElementById('h-audytor'),
+      expert: document.getElementById('h-expert')
+    };
+    
+    // Keyboard navigation dla tabów
+    buttons.forEach((button, index) => {
+      button.addEventListener('keydown', (e) => {
+        let newIndex;
+        
+        switch(e.key) {
+          case 'ArrowLeft':
+          case 'ArrowUp':
+            newIndex = index === 0 ? buttons.length - 1 : index - 1;
+            e.preventDefault();
+            break;
+          case 'ArrowRight':
+          case 'ArrowDown':
+            newIndex = index === buttons.length - 1 ? 0 : index + 1;
+            e.preventDefault();
+            break;
+          case 'Home':
+            newIndex = 0;
+            e.preventDefault();
+            break;
+          case 'End':
+            newIndex = buttons.length - 1;
+            e.preventDefault();
+            break;
+          default:
+            return;
+        }
+        
+        buttons[newIndex].focus();
+        buttons[newIndex].click();
+      });
+    });
+    
+    buttons.forEach(b=>{
+      b.addEventListener('click', ()=>{
+        try {
+          buttons.forEach(x=>{
+            x.classList.remove('active'); 
+            x.setAttribute('aria-selected','false');
+            x.setAttribute('tabindex', '-1');
+          });
+          
+          b.classList.add('active'); 
+          b.setAttribute('aria-selected','true');
+          b.setAttribute('tabindex', '0');
+          
+          const k = b.getAttribute('data-audience');
+          Object.entries(blocks).forEach(([key,node])=> {
+            if(node) {
+              node.classList.toggle('hide', key!==k);
+              if(key === k) {
+                node.classList.add('fade-in');
+                // Ustaw focus na contencie dla screen readerów
+                node.setAttribute('tabindex', '-1');
+                node.focus();
+                setTimeout(() => node.removeAttribute('tabindex'), 100);
+              }
+            }
+          });
+        } catch(e) {
+          console.error('Audience switch failed:', e);
+        }
+      });
+    });
+
+    // Formularz kontaktowy z ulepszeniami
+    const contactForm = document.getElementById('contactForm');
+    if(contactForm) {
+      const submitBtn = contactForm.querySelector('button[type="submit"]');
+      const statusEl = document.getElementById('form-status');
+      
+      // Real-time validation
+      const nameInput = contactForm.querySelector('#contact-name');
+      const emailInput = contactForm.querySelector('#contact-email');
+      const messageInput = contactForm.querySelector('#contact-message');
+      
+      const validateField = window.PIUtils.debounce((field) => {
+        window.PIUtils.clearError(field);
+        
+        if (field === emailInput && field.value.trim()) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(field.value.trim())) {
+            window.PIUtils.showError(field, 'Podaj prawidłowy adres e-mail');
+          }
+        }
+      }, 500);
+      
+      [nameInput, emailInput, messageInput].forEach(field => {
+        if (field) {
+          field.addEventListener('blur', () => validateField(field));
+          field.addEventListener('input', () => {
+            window.PIUtils.clearError(field);
+            if (field === emailInput) validateField(field);
+          });
+        }
+      });
+      
+      contactForm.addEventListener('submit', function(e) {
+        try {
+          // Wyczyść poprzednie błędy
+          [nameInput, emailInput, messageInput].forEach(field => {
+            if (field) window.PIUtils.clearError(field);
+          });
+          
+          // Podstawowa walidacja
+          const name = nameInput ? nameInput.value.trim() : '';
+          const email = emailInput ? emailInput.value.trim() : '';
+          const message = messageInput ? messageInput.value.trim() : '';
+          
+          let hasErrors = false;
+          
+          if(!name) {
+            window.PIUtils.showError(nameInput, 'Imię i nazwisko jest wymagane');
+            hasErrors = true;
+          }
+          
+          if(!email) {
+            window.PIUtils.showError(emailInput, 'Adres e-mail jest wymagany');
+            hasErrors = true;
+          } else {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if(!emailRegex.test(email)) {
+              window.PIUtils.showError(emailInput, 'Podaj prawidłowy adres e-mail');
+              hasErrors = true;
+            }
+          }
+          
+          if(!message) {
+            window.PIUtils.showError(messageInput, 'Wiadomość jest wymagana');
+            hasErrors = true;
+          }
+          
+          if (hasErrors) {
+            e.preventDefault();
+            statusEl.textContent = 'Popraw błędy w formularzu';
+            statusEl.className = 'error';
+            // Focus na pierwszy błędny field
+            const firstError = this.querySelector('.error');
+            if (firstError && firstError.previousElementSibling) {
+              firstError.previousElementSibling.focus();
+            }
+            return;
+          }
+          
+          window.PIUtils.setLoading(submitBtn, true);
+          statusEl.textContent = 'Przekierowuję do klienta email...';
+          statusEl.className = 'success';
+          
+          // Pozwól na domyślne działanie mailto:
+          setTimeout(() => {
+            window.PIUtils.setLoading(submitBtn, false);
+            statusEl.textContent = 'Dziękujemy! Formularz został wysłany.';
+          }, 2000);
+          
+        } catch(error) {
+          e.preventDefault();
+          console.error('Form submission error:', error);
+          statusEl.textContent = 'Wystąpił błąd. Spróbuj ponownie.';
+          statusEl.className = 'error';
+          window.PIUtils.setLoading(submitBtn, false);
+        }
+      });
+    }
+
+    // Smooth scrolling dla linków kotwionych
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if(target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+
+    // Lazy loading dla obrazów (fallback dla starsze przeglądarki)
+    if ('IntersectionObserver' in window) {
+      const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            if(img.dataset.src) {
+              img.src = img.dataset.src;
+              img.removeAttribute('data-src');
+            }
+            imageObserver.unobserve(img);
+          }
+        });
+      });
+
+      document.querySelectorAll('img[data-src]').forEach(img => {
+        imageObserver.observe(img);
+      });
+    }
+
+    // Error handling dla obrazów
+    document.querySelectorAll('img').forEach(img => {
+      img.addEventListener('error', function() {
+        console.warn('Failed to load image:', this.src);
+        this.style.display = 'none';
+      });
+    });
+
+    // Performance monitoring
+    if ('PerformanceObserver' in window) {
+      try {
+        const observer = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.entryType === 'largest-contentful-paint') {
+              console.log('LCP:', entry.startTime);
+            }
+          }
+        });
+        observer.observe({entryTypes: ['largest-contentful-paint']});
+      } catch(e) {
+        console.warn('Performance monitoring not available');
+      }
+    }
+  </script>
+</body>
+</html>

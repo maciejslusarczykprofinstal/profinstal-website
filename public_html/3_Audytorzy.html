@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PROF INSTAL — Audytorzy (CWU, cyrkulacja, straty, ROI + CSV)</title>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root{
+      --bg1:#0b1220;--bg2:#134e4a;--fg:#e2e8f0;--muted:#94a3b8;
+      --pri:#10b981;--sec:#22d3ee;--card:rgba(255,255,255,0.05);
+      --ok:#10b981;--warn:#f59e0b;--bad:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{
+      background:linear-gradient(120deg,var(--bg1) 60%,var(--bg2) 100%);
+      color:var(--fg);font-family:'Segoe UI','Inter','Roboto',system-ui,Arial;
+      margin:0;min-height:100vh
+    }
+    .wrap{max-width:1200px;margin:28px auto 40px;padding:0 16px}
+    header.brand{
+      background:rgba(0,0,0,.15);border:1px solid rgba(34,211,238,.25);
+      border-radius:16px;padding:14px 16px;margin-bottom:16px;
+      display:flex;align-items:center;gap:16px;flex-wrap:wrap
+    }
+    .logo{width:190px;height:54px;display:flex;align-items:center;justify-content:center;
+      background:#134e4a;border-radius:12px;position:relative;overflow:hidden}
+    .logo:after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:#22d3ee}
+    .logo svg{height:28px}
+    .brand-info h1{margin:0;color:var(--pri);font-weight:800;font-size:1.25rem}
+    .brand-info .tiny{color:#c8d4e3;font-size:.95rem}
+    .brand-info .muted{color:#94a3b8;font-size:.9rem}
+    nav.bread{margin:4px 0 0;color:#b9c6d6;font-size:.95rem}
+    nav.bread a{color:#c8e4ff;text-decoration:none;border-bottom:1px dotted rgba(200,228,255,.4)}
+    nav.bread span{opacity:.8}
+
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+    .card{background:var(--card);border-radius:16px;padding:18px;border:1px solid rgba(34,211,238,.15)}
+    .card h3{margin:0 0 10px;color:var(--sec)}
+    .section h4{margin:12px 0 8px;color:#bfeaf7}
+    label{display:block;margin:10px 0 6px;font-weight:600;color:var(--sec)}
+    input, select{
+      width:100%;padding:10px;border-radius:10px;border:1px solid var(--sec);
+      background:#0f172a;color:var(--fg);font-size:1rem
+    }
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+    .row-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .btn{border-radius:12px;padding:10px 16px;cursor:pointer;border:1px solid transparent}
+    .btn-primary{background:linear-gradient(90deg,var(--pri),var(--sec));color:#001b18;font-weight:700}
+    .btn-ghost{background:transparent;border:1px dashed var(--sec);color:var(--sec)}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    hr.sep{border:none;border-top:1px solid rgba(34,211,238,.25);margin:14px 0}
+    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .kpi{background:rgba(0,0,0,.12);border:1px solid rgba(34,211,238,.25);border-radius:12px;padding:10px}
+    .kpi .label{font-size:.9rem;color:#b7c6d8}
+    .kpi .val{font-size:1.2rem;font-weight:800;color:var(--pri)}
+    .warn .val{color:var(--warn)} .bad .val{color:var(--bad)}
+    table.clean{width:100%;border-collapse:separate;border-spacing:0 6px}
+    table.clean th, table.clean td{padding:8px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(34,211,238,.15)}
+    table.clean th{background:rgba(34,211,238,.1);text-align:left;color:#d7f8ff}
+    .num{white-space:nowrap;text-align:right}
+    .right{text-align:right}
+    details{background:rgba(0,0,0,.12);border:1px solid rgba(34,211,238,.25);border-radius:12px;padding:10px;margin:10px 0}
+    details>summary{cursor:pointer;color:var(--sec);font-weight:700}
+    footer{
+      margin-top:18px;padding-top:10px;border-top:1px solid rgba(34,211,238,.25);
+      text-align:center;color:#c8d4e3;font-size:.9rem
+    }
+    @media (max-width:1000px){ .grid{grid-template-columns:1fr} .row-4{grid-template-columns:1fr 1fr} .kpis{grid-template-columns:1fr 1fr 1fr} }
+    @media (max-width:640px){ .row,.row-3,.row-4{grid-template-columns:1fr} .kpis{grid-template-columns:1fr 1fr} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="brand">
+      <div class="logo" aria-label="Logo PROF INSTAL">
+    <img src="/static/img/logo.png" alt="Logo PROF INSTAL" style="max-width:100%; max-height:100%; object-fit:contain;" />
+      </div>
+      <div class="brand-info">
+        <h1>Panel audytorski — CWU, straty i ROI (CSV)</h1>
+        <div class="tiny">Serwis i audyty HVAC / CWU · tel. +48 000 000 000 · biuro@profinstal.info · www.profinstal.info</div>
+        <div class="muted">NIP 0000000000</div>
+        <nav class="bread"> <a href="./index.html">Strona główna</a> <span>›</span> Audytorzy </nav>
+        <div style="display:flex;gap:16px;align-items:center;padding:16px 0">
+          <img src="/static/img/LOGO512x512.png"  alt="PROF INSTAL — 512"  style="height:64px;width:auto;object-fit:contain">
+        </div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- LEWA kolumna: kalkulatory -->
+      <section class="card section" id="calc">
+        <h3>Kalkulatory energetyczne (dokładne wzory) + scenariusze</h3>
+
+        <!-- 1) Bilans energii CWU -->
+        <h4>1) Bilans energii CWU — Q = V · ρ · c · ΔT</h4>
+        <div class="row-4">
+          <div>
+            <label>Zużycie ciepłej wody V [m³/mies.]</label>
+            <input id="V" type="number" step="0.01" min="0" value="325" />
+          </div>
+          <div>
+            <label>Temperatura zimnej wody T<sub>in</sub> [°C]</label>
+            <input id="Tin" type="number" step="0.1" value="10" />
+          </div>
+          <div>
+            <label>Temp. wody użytkowej T<sub>out</sub> [°C]</label>
+            <input id="Tout" type="number" step="0.1" value="55" />
+          </div>
+          <div>
+            <label>Cena ciepła [zł/kWh]</label>
+            <input id="heatPrice" type="number" step="0.01" min="0" value="0.45" />
+          </div>
+        </div>
+        <p class="muted">Praktyczne przybliżenie: <b>E<sub>użyteczna</sub> [kWh]</b> ≈ V · ΔT · 1,163 (ρ≈1000 kg/m³, c≈4,186 kJ/kgK).</p>
+
+        <hr class="sep">
+
+        <!-- 2) Straty cyrkulacji -->
+        <h4>2) Straty cyrkulacji (EN ISO 12241 – model uproszczony)</h4>
+        <div class="row-4">
+          <div>
+            <label>Średnica wewn. rury D<sub>in</sub> [mm]</label>
+            <input id="Din" type="number" step="0.1" value="25" />
+          </div>
+          <div>
+            <label>Izolacja — grubość t [mm]</label>
+            <input id="tIns" type="number" step="1" value="30" />
+          </div>
+          <div>
+            <label>Przewodność izolacji λ [W/mK]</label>
+            <input id="lambda" type="number" step="0.001" value="0.035" />
+          </div>
+          <div>
+            <label>Wsp. przejmowania ciepła h<sub>ext</sub> [W/m²K]</label>
+            <input id="hExt" type="number" step="0.1" value="7.7" />
+          </div>
+        </div>
+        <div class="row-4">
+          <div>
+            <label>Temp. przewodu T<sub>p</sub> [°C]</label>
+            <input id="Tpipe" type="number" step="0.1" value="55" />
+          </div>
+          <div>
+            <label>Temp. otoczenia T<sub>amb</sub> [°C]</label>
+            <input id="Tamb" type="number" step="0.1" value="20" />
+          </div>
+          <div>
+            <label>Długość obiegu L [m]</label>
+            <input id="L" type="number" step="1" value="450" />
+          </div>
+          <div>
+            <label>Godziny pracy cyrkulacji [h/d]</label>
+            <input id="hDay" type="number" step="1" min="0" max="24" value="24" />
+          </div>
+        </div>
+
+        <hr class="sep">
+
+        <!-- 2B) Straty zasobnika -->
+        <h4>2B) Straty postojowe zasobnika (UA)</h4>
+        <div class="row-4">
+          <div>
+            <label>UA zasobnika [W/K]</label>
+            <input id="UA" type="number" step="0.1" value="14" />
+          </div>
+          <div>
+            <label>Temp. magazynu T<sub>stor</sub> [°C]</label>
+            <input id="Tstor" type="number" step="0.1" value="60" />
+          </div>
+          <div>
+            <label>Temp. pomieszczenia T<sub>amb,tank</sub> [°C]</label>
+            <input id="TambTank" type="number" step="0.1" value="20" />
+          </div>
+          <div>
+            <label>Godziny „gorące” [h/d]</label>
+            <input id="hotHours" type="number" step="1" min="0" max="24" value="24" />
+          </div>
+        </div>
+        <p class="muted">Q<sub>tank</sub> [kWh/mies.] = UA · (T<sub>stor</sub> − T<sub>amb</sub>) · h<sub>hot</sub> · dni / 1000.</p>
+
+        <hr class="sep">
+
+        <!-- 2C) Sprawność przygotowania -->
+        <h4>2C) Sprawność przygotowania CWU (węzeł/wymiennik)</h4>
+        <div class="row-3">
+          <div>
+            <label>Sprawność η<sub>prep</sub> (0–1)</label>
+            <input id="etaPrep" type="number" step="0.01" min="0.5" max="1" value="0.92" />
+          </div>
+          <div>
+            <label>Koszt energii el. (pompy) [zł/kWh]</label>
+            <input id="elPrice" type="number" step="0.01" value="0.90" />
+          </div>
+          <div>
+            <label>Dni w miesiącu</label>
+            <input id="days" type="number" step="1" value="30" />
+          </div>
+        </div>
+        <p class="muted">E<sub>we</sub> = E<sub>użyteczna</sub>/η<sub>prep</sub>, a strata przygotowania = E<sub>we</sub> − E<sub>użyteczna</sub>.</p>
+
+        <hr class="sep">
+
+        <!-- 3) Energia pomp -->
+        <h4>3) Energia pomp cyrkulacyjnych</h4>
+        <div class="row-4">
+          <div>
+            <label>Moc pompy P [W]</label>
+            <input id="Ppump" type="number" step="1" value="120" />
+          </div>
+          <div>
+            <label>Godziny pracy [h/d]</label>
+            <input id="P_hDay" type="number" step="1" value="24" />
+          </div>
+          <div>
+            <label>(kopiowane) Dni w miesiącu</label>
+            <input id="days2" type="number" step="1" value="30" />
+          </div>
+          <div>
+            <label>(kopiowane) Cena el. [zł/kWh]</label>
+            <input id="elPrice2" type="number" step="0.01" value="0.90" />
+          </div>
+        </div>
+
+        <hr class="sep">
+
+        <!-- 4) Scenariusz „po optymalizacji” -->
+        <h4>4) Scenariusz „po optymalizacji”</h4>
+        <div class="row-4">
+          <div>
+            <label>Nowa grubość izolacji rurociągów [mm]</label>
+            <input id="tInsNew" type="number" step="1" value="50" />
+          </div>
+          <div>
+            <label>Spadek strat po równoważeniu [%]</label>
+            <input id="balPct" type="number" step="1" value="20" />
+          </div>
+          <div>
+            <label>Nowe godziny cyrkulacji [h/d]</label>
+            <input id="hDayNew" type="number" step="1" value="18" />
+          </div>
+          <div>
+            <label>Redukcja mocy pomp [%]</label>
+            <input id="pumpSavePct" type="number" step="1" value="30" />
+          </div>
+        </div>
+        <div class="row-4">
+          <div>
+            <label>UA zasobnika — po modernizacji [W/K]</label>
+            <input id="UAnew" type="number" step="0.1" value="8" />
+          </div>
+          <div>
+            <label>Obniżka temp. magazynu [°C]</label>
+            <input id="dTstorNight" type="number" step="0.1" value="5" />
+          </div>
+          <div>
+            <label>Nowe „gorące” godziny [h/d]</label>
+            <input id="hotHoursNew" type="number" step="1" value="20" />
+          </div>
+          <div>
+            <label>Nowa sprawność η<sub>prep</sub></label>
+            <input id="etaPrepNew" type="number" step="0.01" min="0.5" max="1" value="0.96" />
+          </div>
+        </div>
+
+        <div class="actions" style="margin-top:10px">
+          <button id="btnCalc" class="btn btn-primary" type="button">Przelicz</button>
+          <button id="btnReset" class="btn btn-ghost" type="button">Reset</button>
+        </div>
+
+        <hr class="sep">
+
+        <!-- KPI rozszerzone -->
+        <div class="kpis">
+          <div class="kpi"><div class="label">E użyteczna CWU (mies.)</div><div class="val" id="kpi_Euse">– kWh</div></div>
+          <div class="kpi"><div class="label">Strata przygotowania</div><div class="val" id="kpi_EprepLoss">– kWh</div></div>
+          <div class="kpi warn"><div class="label">Straty cyrkulacji</div><div class="val" id="kpi_Qcirc">– kWh</div></div>
+          <div class="kpi warn"><div class="label">Straty zasobnika</div><div class="val" id="kpi_Qtank">– kWh</div></div>
+          <div class="kpi"><div class="label">Razem energia cieplna</div><div class="val" id="kpi_EheatTot">– kWh</div></div>
+          <div class="kpi"><div class="label">Energia pomp</div><div class="val" id="kpi_Epump">– kWh</div></div>
+          <div class="kpi"><div class="label">Koszt ciepła</div><div class="val" id="kpi_costHeat">– zł</div></div>
+          <div class="kpi"><div class="label">Koszt pomp</div><div class="val" id="kpi_costPump">– zł</div></div>
+          <div class="kpi"><div class="label">Oszczędność mies.</div><div class="val" id="kpi_savMonth">– zł</div></div>
+          <div class="kpi"><div class="label">Oszczędność 12 mies.</div><div class="val" id="kpi_savYear">– zł</div></div>
+          <div class="kpi bad"><div class="label">Udziały: prep / zas. / cyrk.</div><div class="val" id="kpi_shares">– / – / – %</div></div>
+        </div>
+      </section>
+
+      <!-- PRAWA kolumna: metodologia -->
+      <aside class="card section">
+        <h3>Metodologia, normy, checklisty</h3>
+        <details open>
+          <summary>Wzory i założenia</summary>
+          <ul>
+            <li><b>E użyteczna</b> = V · ΔT · 1,163 [kWh/mies.]</li>
+            <li><b>Straty cyrkulacji:</b> EN ISO 12241 (R<sub>tot</sub> = ln(r<sub>out</sub>/r<sub>in</sub>)/(2πλ)+1/(h·2πr<sub>out</sub>)).</li>
+            <li><b>Straty zasobnika:</b> Q<sub>tank</sub> = UA·(T<sub>stor</sub>−T<sub>amb</sub>)·h·dni/1000.</li>
+            <li><b>Przygotowanie CWU:</b> E<sub>we</sub>=E<sub>użyteczna</sub>/η, strata=E<sub>we</sub>−E<sub>użyteczna</sub>.</li>
+            <li><b>Energia pomp:</b> P[kW]·h·dni.</li>
+            <li><b>Koszt ciepła:</b> (E<sub>we</sub>+Q<sub>tank</sub>+Q<sub>circ</sub>)·cena.</li>
+          </ul>
+        </details>
+        <details>
+          <summary>Normy (wybór)</summary>
+          <ul>
+            <li>EN ISO 12241 — obliczenia strat przewodów i izolacji.</li>
+            <li>PN-EN 806 (1–5) — instalacje wodociągowe.</li>
+            <li>PN-EN 12831-3 — obciążenie dla CWU.</li>
+            <li>PN-EN 15316 (seria) — energetyka systemów.</li>
+          </ul>
+        </details>
+        <div class="actions">
+          <button id="btnCopyKPI" class="btn btn-ghost" type="button">Kopiuj KPI</button>
+          <button id="btnPrint" class="btn btn-ghost" type="button">Drukuj / PDF</button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ROI + CSV -->
+    <section class="card section" id="roi" style="margin-top:18px">
+      <h3>ROI – Nakłady (CSV), CAPEX/OPEX i wskaźniki finansowe</h3>
+
+      <h4>5) Nakłady inwestycyjne (CAPEX)</h4>
+      <div class="actions" style="margin-bottom:8px">
+        <input type="file" id="csvInput" accept=".csv" />
+        <button id="btnImportCSV" class="btn btn-ghost" type="button">Importuj CSV kosztorysu</button>
+        <button id="btnExportCSV" class="btn btn-ghost" type="button">Eksportuj CSV (szablon)</button>
+      </div>
+
+      <table class="clean" id="capexTable">
+        <thead>
+          <tr>
+            <th>Pozycja</th>
+            <th>Ilość</th>
+            <th>Jedn.</th>
+            <th class="right">Materiał [zł/jedn.]</th>
+            <th class="right">Robocizna [zł/jedn.]</th>
+            <th class="right">Razem [zł]</th>
+            <th>Uwzględnij</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Izolacja przewodów (wg L)</td>
+            <td><input data-role="qty" type="number" step="1" value="450" /></td>
+            <td>m</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="75" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="45" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Równoważenie — zawory termostatyczne</td>
+            <td><input data-role="qty" type="number" step="1" value="40" /></td>
+            <td>szt.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="280" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="60" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Automatyka CWU (sterownik + czujniki)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="12000" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="3500" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Monitoring ΔT + rejestracja</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="8000" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="1500" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Pompy cyrkulacyjne / przetwornice</td>
+            <td><input data-role="qty" type="number" step="1" value="2" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="3000" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="800" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colspan="5" class="right">Suma CAPEX:</th>
+            <th class="num" id="capexTotal">–</th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="actions" style="margin:8px 0">
+        <button id="btnAddItem" class="btn btn-ghost" type="button">Dodaj pozycję „Inne”</button>
+        <button id="btnCapexRecalc" class="btn btn-ghost" type="button">Przelicz CAPEX</button>
+      </div>
+
+      <h4>6) OPEX, horyzont i inflacja</h4>
+      <div class="row-4">
+        <div>
+          <label>Zmiana OPEX (serwis/utrzymanie) [zł/rok]</label>
+          <input id="opexDelta" type="number" step="1" value="0" />
+        </div>
+        <div>
+          <label>Horyzont analizy [lata]</label>
+          <input id="horizon" type="number" step="1" value="10" />
+        </div>
+        <div>
+          <label>Stopa dyskontowa r [%/rok]</label>
+          <input id="discount" type="number" step="0.1" value="7" />
+        </div>
+        <div>
+          <label>Inflacja cen energii [%/rok]</label>
+          <input id="inflation" type="number" step="0.1" value="3" />
+        </div>
+      </div>
+
+      <h4>7) Oszczędności</h4>
+      <div class="row">
+        <div>
+          <label><input id="useScenarioSavings" type="checkbox" checked /> Użyj oszczędności z kalkulatora (pełne: przygotowanie+zasobnik+cyrkulacja+pomp)</label>
+          <div class="muted">Wartość: <span id="savYearFromCalc">–</span> zł/rok</div>
+        </div>
+        <div>
+          <label>Lub wpisz ręcznie oszczędność w roku 1 [zł/rok]</label>
+          <input id="manualSaving" type="number" step="1" value="0" />
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:10px">
+        <button id="btnROI" class="btn btn-primary" type="button">Policz ROI</button>
+        <button id="btnCopyROI" class="btn btn-ghost" type="button">Kopiuj ROI</button>
+        <button id="btnDownloadROI" class="btn btn-ghost" type="button">Pobierz ROI .doc (HTML)</button>
+      </div>
+
+      <hr class="sep">
+
+      <div class="kpis">
+        <div class="kpi"><div class="label">CAPEX (suma)</div><div class="val" id="kpi_capex">– zł</div></div>
+        <div class="kpi"><div class="label">Oszczędność rok 1 (po OPEX)</div><div class="val" id="kpi_sav1">– zł/rok</div></div>
+        <div class="kpi"><div class="label">Payback</div><div class="val" id="kpi_payback">– lat</div></div>
+        <div class="kpi"><div class="label">Discounted payback</div><div class="val" id="kpi_dpb">– lat</div></div>
+        <div class="kpi"><div class="label">NPV</div><div class="val" id="kpi_npv">– zł</div></div>
+        <div class="kpi"><div class="label">IRR</div><div class="val" id="kpi_irr">– %</div></div>
+      </div>
+    </section>
+
+    <footer>
+      © PROF INSTAL – Wszelkie prawa zastrzeżone · Panel audytorski · NR KONTA: 00 0000 0000 0000 0000 0000 0000
+    </footer>
+  </div>
+
+  <script>
+    const $ = (id)=>document.getElementById(id);
+    const fmt0 = new Intl.NumberFormat('pl-PL',{minimumFractionDigits:0, maximumFractionDigits:0});
+    const fmt2 = new Intl.NumberFormat('pl-PL',{minimumFractionDigits:2, maximumFractionDigits:2});
+
+    // —— Energetyka ——
+    function energyDHW(V, Tin, Tout){ return V * (Tout - Tin) * 1.163; } // kWh/mies.
+    function circLoss(Din_mm, tIns_mm, lambda, hExt, Tpipe, Tamb, L, hDay, days){
+      const r_in = (Din_mm/1000)/2;
+      const r_out = r_in + (tIns_mm/1000);
+      if (r_in <= 0 || r_out <= r_in || lambda <= 0 || hExt <= 0) return { ql: 0, Q: 0 };
+      const Rcond = Math.log(r_out/r_in) / (2*Math.PI*lambda);
+      const Rext  = 1 / (hExt * 2*Math.PI*r_out);
+      const Rtot  = Rcond + Rext;
+      const ql = (Tpipe - Tamb) / Rtot; // W/m
+      const QkWh = ql * L * (hDay*days) / 1000; // kWh
+      return { ql, Q: QkWh };
+    }
+    function tankLoss(UA, Tstor, Tamb, hotHours, days){ return UA * (Tstor - Tamb) * hotHours * days / 1000; } // kWh/mies.
+    function pumpEnergy(P_W, hDay, days){ return (P_W/1000) * hDay * days; } // kWh
+
+    function calc(){
+      // Inputs
+      const V = +$('V').value||0, Tin= +$('Tin').value||0, Tout= +$('Tout').value||0;
+      const heatPrice= +$('heatPrice').value||0;
+
+      const Din= +$('Din').value||0, tIns= +$('tIns').value||0, lambda= +$('lambda').value||0.035, hExt= +$('hExt').value||7.7;
+      const Tpipe= +$('Tpipe').value||0, Tamb= +$('Tamb').value||0, L= +$('L').value||0, hDay= +$('hDay').value||0;
+
+      const UA= +$('UA').value||0, Tstor= +$('Tstor').value||0, TambTank= +$('TambTank').value||0, hotHours= +$('hotHours').value||0;
+      const etaPrep= Math.max(0.5, Math.min(1, +$('etaPrep').value||0.9));
+
+      const P_W= +$('Ppump').value||0, Ph= +$('P_hDay').value||0;
+      const days= +$('days').value||30, elPrice= +$('elPrice').value||0.9;
+      $('days2').value = days; $('elPrice2').value = elPrice;
+
+      // Baseline energies
+      const E_use = energyDHW(V, Tin, Tout);                  // użyteczna
+      const E_we  = (etaPrep>0)? E_use/etaPrep : E_use;       // wejściowa (zakupiona) na przygotowanie
+      const E_prepLoss = Math.max(0, E_we - E_use);           // straty przygotowania
+      const Q_circ = circLoss(Din, tIns, lambda, hExt, Tpipe, Tamb, L, hDay, days).Q;
+      const Q_tank = tankLoss(UA, Tstor, TambTank, hotHours, days);
+      const E_heat_total = E_we + Q_tank + Q_circ;            // całkowita energia cieplna
+      const costHeat = E_heat_total * heatPrice;
+
+      const E_pump = pumpEnergy(P_W, Ph, days);
+      const costPump = E_pump * elPrice;
+
+      // Scenario
+      const tInsNew= +$('tInsNew').value||tIns, balPct= Math.max(0, Math.min(100, +$('balPct').value||0));
+      const hDayNew= +$('hDayNew').value||hDay, pumpSavePct= Math.max(0, Math.min(100, +$('pumpSavePct').value||0));
+      const UAnew= +$('UAnew').value||UA, dTstorNight= +$('dTstorNight').value||0, hotHoursNew= +$('hotHoursNew').value||hotHours;
+      const etaPrepNew= Math.max(0.5, Math.min(1, +$('etaPrepNew').value||etaPrep));
+
+      const circNew = circLoss(Din, tInsNew, lambda, hExt, Tpipe, Tamb, L, hDayNew, days);
+      const Q_circ_bal = Math.max(0, circNew.Q * (1 - balPct/100));
+
+      const TstorNew = Math.max(30, Tstor - dTstorNight);
+      const Q_tank_new = tankLoss(UAnew, TstorNew, TambTank, hotHoursNew, days);
+
+      const E_we_new = (etaPrepNew>0)? E_use/etaPrepNew : E_use;
+      const E_heat_total_new = E_we_new + Q_tank_new + Q_circ_bal;
+      const costHeatNew = E_heat_total_new * heatPrice;
+
+      const E_pump_new = pumpEnergy(P_W*(1 - pumpSavePct/100), hDayNew, days);
+      const costPumpNew = E_pump_new * elPrice;
+
+      // Savings
+      const saveHeatMonth = Math.max(0, costHeat - costHeatNew);
+      const savePumpMonth = Math.max(0, costPump - costPumpNew);
+      const savMonth = saveHeatMonth + savePumpMonth;
+      const savYear  = savMonth * 12;
+
+      // Shares
+      const shPrep = E_heat_total>0 ? (E_prepLoss/E_heat_total*100) : 0;
+      const shTank = E_heat_total>0 ? (Q_tank/E_heat_total*100) : 0;
+      const shCirc = E_heat_total>0 ? (Q_circ/E_heat_total*100) : 0;
+
+      // KPIs
+      $('kpi_Euse').textContent = fmt2.format(E_use)+' kWh';
+      $('kpi_EprepLoss').textContent = fmt2.format(E_prepLoss)+' kWh';
+      $('kpi_Qcirc').textContent = fmt2.format(Q_circ)+' kWh';
+      $('kpi_Qtank').textContent = fmt2.format(Q_tank)+' kWh';
+      $('kpi_EheatTot').textContent = fmt2.format(E_heat_total)+' kWh';
+      $('kpi_Epump').textContent = fmt2.format(E_pump)+' kWh';
+      $('kpi_costHeat').textContent = fmt2.format(costHeat)+' zł';
+      $('kpi_costPump').textContent = fmt2.format(costPump)+' zł';
+      $('kpi_savMonth').textContent = fmt2.format(savMonth)+' zł';
+      $('kpi_savYear').textContent = fmt2.format(savYear)+' zł';
+      $('kpi_shares').textContent = `${fmt2.format(shPrep)} / ${fmt2.format(shTank)} / ${fmt2.format(shCirc)} %`;
+
+      // Warn colors by share of losses (sum)
+      const warnEl = $('kpi_shares').parentElement.parentElement;
+      warnEl.classList.remove('warn','bad');
+      const totalLossShare = shPrep + shTank + shCirc;
+      if (totalLossShare >= 40) warnEl.classList.add('bad'); else if (totalLossShare >= 25) warnEl.classList.add('warn');
+
+      // Save context for ROI
+      window.__aud = {
+        E_use, E_we, E_prepLoss, Q_circ, Q_tank, E_heat_total, costHeat, E_pump, costPump,
+        E_heat_total_new, costHeatNew, E_pump_new, costPumpNew,
+        savMonth, savYear,
+        params:{V,Tin,Tout,heatPrice,Din,tIns,lambda,hExt,Tpipe,Tamb,L,hDay,UA,Tstor,TambTank,hotHours,etaPrep,P_W,Ph,days,elPrice}
+      };
+
+      $('savYearFromCalc').textContent = fmt2.format(savYear)+' zł/rok';
+
+      // Synchronizacja CAPEX: długość izolacji
+      const rowIns = document.querySelector('#capexTable tbody tr:first-child [data-role="qty"]');
+      if (rowIns) rowIns.value = fmt0.format(L).replace(/\s/g,'');
+      recalcCapexTable();
+    }
+
+    // —— CAPEX table helpers ——
+    function rowSum(tr){
+      const qty = +tr.querySelector('[data-role="qty"]').value || 0;
+      const mat = +tr.querySelector('[data-role="mat"]').value || 0;
+      const lab = +tr.querySelector('[data-role="lab"]').value || 0;
+      const use = tr.querySelector('[data-role="use"]').checked;
+      const sum = qty * (mat + lab);
+      tr.querySelector('[data-role="sum"]').textContent = fmt2.format(sum) + ' zł';
+      return use ? sum : 0;
+    }
+    function recalcCapexTable(){
+      const rows = Array.from(document.querySelectorAll('#capexTable tbody tr'));
+      let capex = 0; rows.forEach(tr=> capex += rowSum(tr));
+      $('capexTotal').textContent = fmt2.format(capex)+' zł';
+      return capex;
+    }
+    document.querySelector('#capexTable tbody').addEventListener('input', recalcCapexTable);
+    document.querySelector('#capexTable tbody').addEventListener('change', recalcCapexTable);
+    $('btnCapexRecalc').addEventListener('click', recalcCapexTable);
+    $('btnAddItem').addEventListener('click', ()=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>Inne — opis</td>
+        <td><input data-role="qty" type="number" step="1" value="1" /></td>
+        <td>szt.</td>
+        <td class="right"><input data-role="mat" type="number" step="1" value="0" /></td>
+        <td class="right"><input data-role="lab" type="number" step="1" value="0" /></td>
+        <td class="num" data-role="sum">–</td>
+        <td class="right"><input data-role="use" type="checkbox" checked /></td>`;
+      document.querySelector('#capexTable tbody').appendChild(tr);
+      recalcCapexTable();
+    });
+
+    // —— CSV import/export ——
+    function detectDelimiter(header){
+      const sc = (header.match(/;/g)||[]).length, cm = (header.match(/,/g)||[]).length;
+      return sc>=cm?';':',';
+    }
+    function splitCSVLine(line, delim){
+      const out=[]; let cur='', q=false;
+      for(let i=0;i<line.length;i++){
+        const c=line[i];
+        if(c==='\"'){ q=!q; continue; }
+        if(c===delim && !q){ out.push(cur); cur=''; } else cur+=c;
+      }
+      out.push(cur);
+      return out.map(s=>s.trim());
+    }
+    function normalize(s){
+      return s.toLowerCase()
+        .replaceAll('ą','a').replaceAll('ć','c').replaceAll('ę','e').replaceAll('ł','l')
+        .replaceAll('ń','n').replaceAll('ó','o').replaceAll('ś','s').replaceAll('ż','z').replaceAll('ź','z')
+        .replace(/\s+/g,'');
+    }
+    function mapColumns(headers){
+      const map={pos:null, qty:null, unit:null, mat:null, lab:null, use:null};
+      headers.forEach((h,i)=>{
+        const n=normalize(h);
+        if(n.startsWith('pozyc')) map.pos=i;
+        else if(n.startsWith('ilos')||n==='qty') map.qty=i;
+        else if(n.startsWith('jed')) map.unit=i;
+        else if(n.startsWith('material')||n==='mat') map.mat=i;
+        else if(n.startsWith('roboc')||n==='lab') map.lab=i;
+        else if(n.startsWith('uwzg')||n==='use'||n==='include') map.use=i;
+      });
+      return map;
+    }
+    function parseBool(v){
+      const s=String(v).toLowerCase().trim();
+      return ['1','t','y','tak','true','x','✓'].includes(s);
+    }
+    function importCSV(text){
+      const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
+      if(!lines.length) return;
+      const delim = detectDelimiter(lines[0]);
+      const headers = splitCSVLine(lines[0], delim);
+      const map = mapColumns(headers);
+      const tb = document.querySelector('#capexTable tbody');
+      tb.innerHTML='';
+      for(let k=1;k<lines.length;k++){
+        const cols = splitCSVLine(lines[k], delim);
+        if(cols.length<2) continue;
+        const pos = cols[map.pos]||'Pozycja';
+        const qty = +cols[map.qty]||0;
+        const unit= cols[map.unit]||'szt.';
+        const mat = +cols[map.mat]||0;
+        const lab = +cols[map.lab]||0;
+        const use = map.use!=null ? parseBool(cols[map.use]) : true;
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
+          <td>${pos}</td>
+          <td><input data-role="qty" type="number" step="0.01" value="${qty}"/></td>
+          <td>${unit}</td>
+          <td class="right"><input data-role="mat" type="number" step="0.01" value="${mat}"/></td>
+          <td class="right"><input data-role="lab" type="number" step="0.01" value="${lab}"/></td>
+          <td class="num" data-role="sum">–</td>
+          <td class="right"><input data-role="use" type="checkbox" ${use?'checked':''}/></td>`;
+        tb.appendChild(tr);
+      }
+      recalcCapexTable();
+    }
+    $('btnImportCSV').addEventListener('click', ()=>{
+      const f=$('csvInput').files[0];
+      if(!f){ alert('Wybierz plik CSV z Excela.'); return; }
+      const r=new FileReader();
+      r.onload=()=>importCSV(r.result);
+      r.readAsText(f,'utf-8');
+    });
+    $('btnExportCSV').addEventListener('click', ()=>{
+      const rows = Array.from(document.querySelectorAll('#capexTable tbody tr'));
+      const head = ['Pozycja','Ilość','Jedn.','Materiał','Robocizna','Uwzględnij'].join(';');
+      const lines = [head];
+      rows.forEach(tr=>{
+        const pos = tr.children[0].innerText.replace(/;/g,',');
+        const qty = tr.querySelector('[data-role="qty"]').value;
+        const unit= tr.children[2].innerText;
+        const mat = tr.querySelector('[data-role="mat"]').value;
+        const lab = tr.querySelector('[data-role="lab"]').value;
+        const use = tr.querySelector('[data-role="use"]').checked ? 1 : 0;
+        lines.push([pos,qty,unit,mat,lab,use].join(';'));
+      });
+      const blob = new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='capex_prof_instal.csv'; a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    // —— ROI —— 
+    function npv(rate, CF){ return CF.reduce((s,cf,t)=>s + cf/Math.pow(1+rate,t), 0); }
+    function irr(CF){
+      const f=(r)=>npv(r,CF); let lo=-0.99, hi=1.0, flo=f(lo), fhi=f(hi);
+      if(flo*fhi>0) return null;
+      for(let i=0;i<80;i++){ const m=(lo+hi)/2, fm=f(m); if(Math.abs(fm)<1e-7) return m; if(flo*fm<=0){hi=m;fhi=fm;} else {lo=m;flo=fm;} }
+      return (lo+hi)/2;
+    }
+    function discountedPayback(CF, r){
+      let cum=0;
+      for(let t=0;t<CF.length;t++){
+        const df=1/Math.pow(1+r,t), add=CF[t]*df, prev=cum; cum+=add;
+        if(cum>=0){
+          const remain = -prev;
+          return t===0?0: (t-1) + (remain/(add||1));
+        }
+      }
+      return null;
+    }
+
+    function getCapex(){ return recalcCapexTable(); }
+
+    function computeROI(){
+      const capex = getCapex();
+      const useSc = $('useScenarioSavings').checked;
+      const aud = window.__aud || {};
+      let sav1 = useSc && isFinite(aud.savYear) ? aud.savYear : (+$('manualSaving').value||0);
+
+      const infl = (+$('inflation').value||0)/100;
+      const r = (+$('discount').value||0)/100;
+      const N = Math.max(1, parseInt($('horizon').value||'10',10));
+      const opex = +$('opexDelta').value||0;
+
+      const CF = new Array(N+1).fill(0);
+      CF[0] = -capex;
+      for(let t=1;t<=N;t++){
+        const s = sav1*Math.pow(1+infl,t-1) - opex;
+        CF[t] = s;
+      }
+
+      const npvVal = npv(r, CF);
+      const irrVal = irr(CF);
+      const dpb = discountedPayback(CF, r);
+      const payback = (sav1-opex)>0 ? (capex/(sav1-opex)) : null;
+
+      $('kpi_capex').textContent = fmt2.format(capex)+' zł';
+      $('kpi_sav1').textContent = fmt2.format(sav1-opex)+' zł/rok';
+      $('kpi_payback').textContent = payback!=null? fmt2.format(payback)+' lat':'—';
+      $('kpi_dpb').textContent = dpb!=null? fmt2.format(dpb)+' lat':'—';
+      $('kpi_npv').textContent = fmt2.format(npvVal)+' zł';
+      $('kpi_irr').textContent = (irrVal!=null? fmt2.format(irrVal*100)+' %':'—');
+
+      window.__roi = {capex, sav1, opex, infl, r, N, CF, npvVal, irrVal, dpb, useSc};
+    }
+
+    // —— UI bindings ——
+    $('btnCalc').addEventListener('click', calc);
+    $('btnReset').addEventListener('click', ()=>location.reload());
+    $('btnCopyKPI').addEventListener('click', async ()=>{
+      const a = window.__aud;
+      if(!a){ alert('Najpierw „Przelicz”.'); return; }
+      const L=[
+        'AUDYT — KPI (pełne straty CWU)',
+        `E_użyteczna: ${fmt2.format(a.E_use)} kWh/mies.`,
+        `Przygotowanie (wejściowa): ${fmt2.format(a.E_we)} kWh/mies., strata: ${fmt2.format(a.E_prepLoss)} kWh`,
+        `Straty zasobnika: ${fmt2.format(a.Q_tank)} kWh/mies.`,
+        `Straty cyrkulacji: ${fmt2.format(a.Q_circ)} kWh/mies.`,
+        `Razem energia cieplna: ${fmt2.format(a.E_heat_total)} kWh/mies., koszt ciepła: ${fmt2.format(a.costHeat)} zł`,
+        `Energia pomp: ${fmt2.format(a.E_pump)} kWh/mies., koszt: ${fmt2.format(a.costPump)} zł`,
+        `Oszczędność (mies.): ${fmt2.format(a.savMonth)} zł; (12 mies.): ${fmt2.format(a.savYear)} zł`
+      ];
+      try{ await navigator.clipboard.writeText(L.join('\n')); alert('Skopiowano KPI.'); }catch{ alert('Zaznacz i Ctrl+C.'); }
+    });
+    $('btnPrint').addEventListener('click', ()=>window.print());
+
+    $('btnROI').addEventListener('click', computeROI);
+    $('btnCopyROI').addEventListener('click', async ()=>{
+      const r=window.__roi; if(!r){ alert('Najpierw policz ROI.'); return; }
+      const L=[
+        'ROI — podsumowanie',
+        `CAPEX: ${fmt2.format(r.capex)} zł`,
+        `Oszczędność rok 1 (po OPEX): ${fmt2.format(r.sav1 - r.opex)} zł/rok`,
+        `Horyzont: ${r.N} lat; r=${fmt2.format(r.r*100)}%; infl=${fmt2.format(r.infl*100)}%`,
+        `Payback: ${r.sav1 - r.opex > 0 ? fmt2.format(r.capex/(r.sav1 - r.opex))+' lat':'—'}`,
+        `Discounted payback: ${r.dpb!=null? fmt2.format(r.dpb)+' lat':'—'}`,
+        `NPV: ${fmt2.format(r.npvVal)} zł`,
+        `IRR: ${r.irrVal!=null? fmt2.format(r.irrVal*100)+' %':'—'}`
+      ];
+      try{ await navigator.clipboard.writeText(L.join('\n')); alert('Skopiowano ROI.'); }catch{ alert('Zaznacz i Ctrl+C.'); }
+    });
+    $('btnDownloadROI').addEventListener('click', ()=>{
+      const r=window.__roi, a=window.__aud;
+      if(!r||!a){ alert('Najpierw przelicz kalkulator i ROI.'); return; }
+      const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+      const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>ROI – PROF INSTAL</title>
+<style>body{font-family:Calibri,Arial,sans-serif;margin:28px;color:#111}h1{color:#0b735f;font-size:1.4rem;margin:0 0 8px}
+hr{border:none;border-top:2px solid #10b981;margin:8px 0 12px}.small{color:#435}ul{line-height:1.5}</style></head><body>
+<h1>ROI – Modernizacja CWU/cyrkulacji</h1><div class="small">Automatyczny raport PROF INSTAL.</div><hr>
+<h3>KPI energetyczne (mies.)</h3>
+<ul>
+<li>E_użyteczna: ${fmt2.format(a.E_use)} kWh; przygotowanie: ${fmt2.format(a.E_we)} kWh (strata: ${fmt2.format(a.E_prepLoss)} kWh)</li>
+<li>Straty zasobnika: ${fmt2.format(a.Q_tank)} kWh; cyrkulacja: ${fmt2.format(a.Q_circ)} kWh</li>
+<li>Razem energia cieplna: ${fmt2.format(a.E_heat_total)} kWh; koszt ciepła: ${fmt2.format(a.costHeat)} zł</li>
+<li>Energia pomp: ${fmt2.format(a.E_pump)} kWh; koszt: ${fmt2.format(a.costPump)} zł</li>
+<li>Oszczędność: ${fmt2.format(a.savMonth)} zł/mies. • ${fmt2.format(a.savYear)} zł/rok</li>
+</ul>
+<h3>Wyniki finansowe</h3>
+<ul>
+<li>CAPEX: ${fmt2.format(r.capex)} zł</li>
+<li>Payback: ${r.sav1 - r.opex > 0 ? fmt2.format(r.capex/(r.sav1 - r.opex))+' lat':'—'}</li>
+<li>Discounted payback: ${r.dpb!=null? fmt2.format(r.dpb)+' lat':'—'}</li>
+<li>NPV: ${fmt2.format(r.npvVal)} zł</li>
+<li>IRR: ${r.irrVal!=null? fmt2.format(r.irrVal*100)+' %':'—'}</li>
+</ul>
+<footer style="margin-top:18px;padding-top:10px;border-top:1px solid #aaa;color:#333;font-size:.9rem">© PROF INSTAL – Wszelkie prawa zastrzeżone</footer>
+</body></html>`;
+      const blob=new Blob([html],{type:'application/msword'});
+      const ael=document.createElement('a'); ael.href=URL.createObjectURL(blob); ael.download='ROI_PROF_INSTAL.doc'; ael.click();
+      URL.revokeObjectURL(ael.href);
+    });
+
+    // Autostart
+    window.addEventListener('DOMContentLoaded', ()=>{ calc(); recalcCapexTable(); });
+  </script>
+</body>
+</html>
