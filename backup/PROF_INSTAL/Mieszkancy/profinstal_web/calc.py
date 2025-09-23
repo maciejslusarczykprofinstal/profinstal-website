@@ -58,7 +58,7 @@ def compute_all(bill: float, heat_price: float, unit: str, vat: float, month_m3:
 
 
 # --- AUDYTORSKIE PORÓWNANIE INSTALACJI ---
-def compute_audit(params_old: dict, params_new: dict) -> dict:
+def compute_audit(params_old: dict, params_new: dict, heat_price: float = 73.69, unit: str = "GJ", vat: float = 23.0) -> dict:
     """
     Porównuje straty starej i nowej instalacji na podstawie parametrów i wzorów z norm.
     params_old, params_new: dict z kluczami:
@@ -66,7 +66,10 @@ def compute_audit(params_old: dict, params_new: dict) -> dict:
         - 'lambda' (wsp. przewodzenia [W/mK]), 't_in' (temp. zasilania [°C]),
         - 't_out' (temp. powrotu [°C]), 't_amb' (temp. otoczenia [°C]),
         - 'ins_thick' (grubość izolacji [mm]), 'czas_pracy' (h/rok)
-    Zwraca słownik z porównaniem strat i oszczędności.
+    heat_price: cena ciepła (domyślnie 73.69 zł/GJ)
+    unit: jednostka ceny ("GJ" lub "MJ")
+    vat: VAT w procentach (domyślnie 23%)
+    Zwraca słownik z porównaniem strat i oszczędności oraz kosztów.
     """
     def heat_loss(Q, L, d, lamb, t_in, t_out, t_amb, ins_thick, czas_pracy):
         # Wzór uproszczony wg PN-EN 12831, PN-EN 15316
@@ -90,9 +93,20 @@ def compute_audit(params_old: dict, params_new: dict) -> dict:
     )
     oszczednosc = Q_loss_old - Q_loss_new
     procent = 100.0 * oszczednosc / Q_loss_old if Q_loss_old else 0.0
+    
+    # Obliczenie kosztów rocznych na podstawie strat energii
+    # Przeliczenie kWh na GJ: 1 kWh = 0.0036 GJ
+    price_gj_brutto = price_GJ_brutto(heat_price, unit, vat)
+    cost_old = Q_loss_old * 0.0036 * price_gj_brutto  # zł/rok
+    cost_new = Q_loss_new * 0.0036 * price_gj_brutto  # zł/rok
+    cost_savings = cost_old - cost_new  # zł/rok
+    
     return {
         'Q_loss_old': Q_loss_old,
         'Q_loss_new': Q_loss_new,
         'oszczednosc_kWh': oszczednosc,
-        'oszczednosc_proc': procent
+        'oszczednosc_proc': procent,
+        'cost_old': cost_old,
+        'cost_new': cost_new,
+        'cost_savings': cost_savings
     }
