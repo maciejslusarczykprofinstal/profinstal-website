@@ -60,8 +60,27 @@ def audit():
             # Pobierz parametry starej i nowej instalacji z formularza
             params_old = {k: float(request.form.get(f"old_{k}", 0)) for k in AUDIT_DEFAULTS_OLD.keys()}
             params_new = {k: float(request.form.get(f"new_{k}", 0)) for k in AUDIT_DEFAULTS_NEW.keys()}
-            res = compute_audit(params_old, params_new)
-            return render_template("audit_result.html", res=res, params_old=params_old, params_new=params_new, today=date.today().isoformat())
+            
+            # Pobierz parametry ceny ciepła (opcjonalne, z domyślnymi wartościami)
+            heat_price = float(request.form.get("heat_price", 73.69))
+            unit = request.form.get("unit", "GJ")
+            vat = float(request.form.get("vat", 23.0))
+            
+            res = compute_audit(params_old, params_new, heat_price, unit, vat)
+            
+            # Przygotuj dane do wykresów
+            chart_labels = ["Stara instalacja", "Nowa instalacja"]
+            heat_losses = [res["Q_loss_old"], res["Q_loss_new"]]
+            costs = [res["cost_old"], res["cost_new"]]
+            
+            return render_template("audit_result.html", 
+                                 res=res, 
+                                 params_old=params_old, 
+                                 params_new=params_new, 
+                                 today=date.today().isoformat(),
+                                 chart_labels=chart_labels,
+                                 heat_losses=heat_losses,
+                                 costs=costs)
         except Exception as e:
             flash(f"Błąd danych: {e}")
             return redirect(url_for("audit"))

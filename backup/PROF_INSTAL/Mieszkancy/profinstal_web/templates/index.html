@@ -76,7 +76,7 @@
     </nav>
 
     <script>
-      const cityPrices = JSON.parse('{{ city_prices | tojson | safe | escapejs }}');
+      const cityPrices = {{ city_prices | tojson | safe }};
       function onCityChange() {
         const sel = document.getElementById('city');
         const hp = document.getElementById('heat_price');

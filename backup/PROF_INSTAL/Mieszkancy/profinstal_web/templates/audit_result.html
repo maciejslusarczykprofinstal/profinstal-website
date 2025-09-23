@@ -5,6 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Wynik audytu strat — PROF INSTAL</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+      .chart-container {
+        position: relative;
+        height: 400px;
+        margin: 20px 0;
+      }
+      .chart-canvas {
+        border: 1px solid #ddd;
+        background: #fff;
+        width: 100%;
+        height: 300px;
+      }
+      .chart-legend {
+        margin-top: 10px;
+        text-align: center;
+      }
+      .legend-item {
+        display: inline-block;
+        margin: 0 15px;
+      }
+      .legend-color {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        margin-right: 5px;
+        vertical-align: middle;
+      }
+    </style>
   </head>
   <body>
     <header>
@@ -27,6 +55,7 @@
           {% endfor %}
         </ul>
       </section>
+      
       <section class="card">
         <h2>Porównanie strat</h2>
         <p>Straty starej instalacji: <b>{{ res.Q_loss_old|round(2) }}</b> kWh/rok</p>
@@ -34,8 +63,155 @@
         <p>Oszczędność energii: <b>{{ res.oszczednosc_kWh|round(2) }}</b> kWh/rok</p>
         <p>Oszczędność procentowa: <b>{{ res.oszczednosc_proc|round(1) }}</b>%</p>
       </section>
+      
+      <section class="card">
+        <h2>Porównanie kosztów</h2>
+        <p>Koszt strat starej instalacji: <b>{{ res.cost_old|round(2) }}</b> zł/rok</p>
+        <p>Koszt strat nowej instalacji: <b>{{ res.cost_new|round(2) }}</b> zł/rok</p>
+        <p>Oszczędność kosztów: <b>{{ res.cost_savings|round(2) }}</b> zł/rok</p>
+      </section>
+      
+      <section class="card">
+        <h2>Wykres porównania strat ciepła</h2>
+        <div class="chart-container">
+          <canvas id="heatLossChart" class="chart-canvas"></canvas>
+          <div class="chart-legend">
+            <div class="legend-item">
+              <span class="legend-color" style="background-color: rgba(255, 99, 132, 0.8);"></span>
+              Stara instalacja: {{ res.Q_loss_old|round(2) }} kWh/rok
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background-color: rgba(54, 162, 235, 0.8);"></span>
+              Nowa instalacja: {{ res.Q_loss_new|round(2) }} kWh/rok
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section class="card">
+        <h2>Wykres porównania rocznych kosztów</h2>
+        <div class="chart-container">
+          <canvas id="costsChart" class="chart-canvas"></canvas>
+          <div class="chart-legend">
+            <div class="legend-item">
+              <span class="legend-color" style="background-color: rgba(255, 206, 86, 0.8);"></span>
+              Stara instalacja: {{ res.cost_old|round(2) }} zł/rok
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background-color: rgba(75, 192, 192, 0.8);"></span>
+              Nowa instalacja: {{ res.cost_new|round(2) }} zł/rok
+            </div>
+          </div>
+        </div>
+      </section>
+      
       <p><a href="{{ url_for('audit') }}">← Wróć do audytu</a></p>
       <p><a href="{{ url_for('index') }}">← Wróć do panelu głównego</a></p>
     </main>
+    
+    <script>
+      // Dane z backend
+      const chartLabels = {{ chart_labels|tojson|safe }};
+      const heatLossesData = {{ heat_losses|tojson|safe }};
+      const costsData = {{ costs|tojson|safe }};
+      
+      // Prosta implementacja wykresów słupkowych
+      function drawBarChart(canvasId, data, colors, title, unit) {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext('2d');
+        
+        // Ustaw rozmiar canvas
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        
+        const width = canvas.width;
+        const height = canvas.height;
+        const padding = 40;
+        const chartWidth = width - 2 * padding;
+        const chartHeight = height - 2 * padding;
+        
+        // Wyczyść canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Znajdź maksymalną wartość
+        const maxValue = Math.max(...data);
+        
+        // Narysuj tytuł
+        ctx.fillStyle = '#333';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(title, width / 2, 25);
+        
+        // Narysuj słupki
+        const barWidth = chartWidth / (data.length * 2);
+        const barSpacing = barWidth * 0.5;
+        
+        data.forEach((value, index) => {
+          const barHeight = (value / maxValue) * chartHeight;
+          const x = padding + index * (barWidth + barSpacing) + barSpacing;
+          const y = height - padding - barHeight;
+          
+          // Narysuj słupek
+          ctx.fillStyle = colors[index];
+          ctx.fillRect(x, y, barWidth, barHeight);
+          
+          // Narysuj border
+          ctx.strokeStyle = colors[index].replace('0.8', '1');
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x, y, barWidth, barHeight);
+          
+          // Narysuj wartość na słupku
+          ctx.fillStyle = '#333';
+          ctx.font = '12px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(value.toFixed(1) + ' ' + unit, x + barWidth / 2, y - 5);
+          
+          // Narysuj etykietę na dole
+          ctx.fillText(chartLabels[index], x + barWidth / 2, height - 5);
+        });
+        
+        // Narysuj oś Y
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, height - padding);
+        ctx.stroke();
+        
+        // Narysuj oś X
+        ctx.beginPath();
+        ctx.moveTo(padding, height - padding);
+        ctx.lineTo(width - padding, height - padding);
+        ctx.stroke();
+      }
+      
+      // Narysuj wykresy po załadowaniu strony
+      window.addEventListener('load', function() {
+        drawBarChart('heatLossChart', heatLossesData, [
+          'rgba(255, 99, 132, 0.8)',
+          'rgba(54, 162, 235, 0.8)'
+        ], 'Porównanie strat ciepła', 'kWh/rok');
+        
+        drawBarChart('costsChart', costsData, [
+          'rgba(255, 206, 86, 0.8)',
+          'rgba(75, 192, 192, 0.8)'
+        ], 'Porównanie rocznych kosztów', 'zł/rok');
+      });
+      
+      // Przerysuj wykresy przy zmianie rozmiaru okna
+      window.addEventListener('resize', function() {
+        setTimeout(function() {
+          drawBarChart('heatLossChart', heatLossesData, [
+            'rgba(255, 99, 132, 0.8)',
+            'rgba(54, 162, 235, 0.8)'
+          ], 'Porównanie strat ciepła', 'kWh/rok');
+          
+          drawBarChart('costsChart', costsData, [
+            'rgba(255, 206, 86, 0.8)',
+            'rgba(75, 192, 192, 0.8)'
+          ], 'Porównanie rocznych kosztów', 'zł/rok');
+        }, 100);
+      });
+    </script>
   </body>
 </html>

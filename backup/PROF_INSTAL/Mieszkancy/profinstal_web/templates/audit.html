@@ -13,6 +13,13 @@
     </header>
     <main>
       <form action="{{ url_for('audit') }}" method="post" class="card">
+        <h2>Parametry kosztów</h2>
+        <div class="grid">
+          <label>Cena ciepła <input name="heat_price" value="73.69" step="0.01" type="number"> zł/GJ</label>
+          <label>Jednostka <select name="unit"><option value="GJ">GJ</option><option value="MJ">MJ</option></select></label>
+          <label>VAT <input name="vat" value="23.0" step="0.1" type="number"> %</label>
+        </div>
+        
         <h2>Dane techniczne — stara instalacja</h2>
         <div class="grid">
           {% for k, v in audit_defaults_old.items() %}
