@@ -31,7 +31,8 @@ Kontakt: prof.instal@example.com
 # ===== moduły opcjonalne =====
 DOCX_AVAILABLE = True
 try:
-    from docx import Document
+    from docx import Document as DocumentFactory
+from docx.document import Document as DocxDocument
     from docx.shared import Pt, Inches
     from docx.oxml.ns import qn
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -551,13 +552,13 @@ class App(tk.Tk):
         ln("© 2025 PROF INSTAL Maciej Ślusarczyk - Model obliczeniowy zastrzeżony")
 
     # ===== DOCX helpers =====
-    def _style_docx_times(self, doc: Document):
+    def _style_docx_times(self, doc: DocxDocument):
         style = doc.styles["Normal"]
         style.font.name = "Times New Roman"
         style._element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
         style.font.size = Pt(11)
 
-    def _add_docx_header(self, doc: Document):
+    def _add_docx_header(self, doc: DocxDocument):
         # Copyright na początku dokumentu
         copyright_para = doc.add_paragraph()
         copyright_run = copyright_para.add_run(COPYRIGHT_NOTICE)
@@ -582,7 +583,7 @@ class App(tk.Tk):
                 pass
         doc.add_paragraph("")
 
-    def _legal_basis_docx(self, doc: Document):
+    def _legal_basis_docx(self, doc: DocxDocument):
         doc.add_heading("Podstawy prawne i normatywne", level=1)
         doc.add_paragraph("• Ustawa o spółdzielniach mieszkaniowych – art. 4 ust. 2 (rzeczywiste koszty).")
         doc.add_paragraph("• Prawo budowlane – art. 62 (należyty stan techniczny; przeglądy okresowe).")
@@ -590,7 +591,7 @@ class App(tk.Tk):
         doc.add_paragraph("• Warunki Techniczne (rozp. MI) m.in. §120, §134 – instalacje wodociągowe/CWU; ograniczanie strat; cyrkulacja.")
         doc.add_paragraph("• Taryfy ciepła zatwierdzane przez Prezesa URE – ceny energii (zł/GJ) i opłaty dystrybucyjne.")
 
-    def _signature_block_docx(self, doc: Document):
+    def _signature_block_docx(self, doc: DocxDocument):
         doc.add_paragraph("")
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
@@ -627,7 +628,7 @@ class App(tk.Tk):
             if not hasattr(self, "_last"): self._calc_all()
             L = self._last; P = self._collect_parties()
 
-            doc = Document(); self._style_docx_times(doc)
+            doc = DocumentFactory(); self._style_docx_times(doc)
 
             copyright_para = doc.add_paragraph()
             copyright_run = copyright_para.add_run(COPYRIGHT_NOTICE)
@@ -743,7 +744,7 @@ class App(tk.Tk):
             if not hasattr(self, "_last"): self._calc_all()
             L = self._last
 
-            doc = Document(); self._style_docx_times(doc); self._add_docx_header(doc)
+            doc = DocumentFactory(); self._style_docx_times(doc); self._add_docx_header(doc)
             doc.add_heading("Opinia techniczno-finansowa — ciepła woda użytkowa (CWU)", 0)
             doc.add_paragraph(f"Data: {datetime.datetime.today().date()}")
 
@@ -884,13 +885,27 @@ class App(tk.Tk):
 
             writeln("Opinia techniczno-finansowa — CWU (skrót)", bold=True); y -= 2*mm
             writeln("Wzory autorskie PROF INSTAL © 2025 Maciej Ślusarczyk:", bold=True, size=9)
-            writeln("Q = m·c·ΔT;  Q[GJ/m³]=(1000·4,19·ΔT)/1e6;  koszt_teor = Q·cena_ciepła_brutto;  η = koszt_teor/rachunek")
-            writeln(f"Rachunek: {L['bill']:.2f} zł/m³ | Ciepło brutto: {L['price_GJ_brutto']:.2f} zł/GJ | ΔT: {L['dT']:.0f}°C")
-            writeln(f"Q_teor: {L['q_per_m3']:.5f} GJ/m³ → koszt_teor: {L['cost_theor']:.2f} zł/m³ | η: {L['eta']*100:.1f}%")
-            writeln(f"Strata: {L['loss_per_m3']:.2f} zł/m³ | Budynek: {L['loss_build_m']:,.2f} zł/m-c; {L['loss_build_y']:,.2f} zł/rok"); y -= 2*mm
-            writeln("Scenariusze modernizacji:", bold=True)
-            writeln(f"70% → koszt {L['cost70']:.2f} zł/m³ | oszcz. {L['save70_m3']:.2f} zł/m³")
-            writeln(f"80% → koszt {L['cost80']:.2f} zł/m³ | oszcz. {L['save80_m3']:.2f} zł/m³")
+            writeln("Podstawowe obliczenia:", bold=True, size=9)
+            writeln("Q = m·c·ΔT — ilość ciepła do podgrzania wody (m=1000 kg, c=4,19 kJ/kgK, ΔT=różnica temperatur)", size=9)
+            writeln("Q[GJ/m³] = (1000·4,19·ΔT)/1e6 — energia na podgrzanie 1 m³ wody w GJ", size=9)
+            writeln("koszt_teor = Q·cena_ciepła_brutto — teoretyczny koszt ogrzania 1 m³", size=9)
+            writeln("η = koszt_teor / rachunek — efektywność kosztowa (im bliżej 100%, tym mniej strat)", size=9)
+            writeln(f"Rachunek: {L['bill']:.2f} zł/m³ | Ciepło brutto: {L['price_GJ_brutto']:.2f} zł/GJ | ΔT: {L['dT']:.0f}°C", size=9)
+            writeln(f"Q_teor: {L['q_per_m3']:.5f} GJ/m³ → koszt_teor: {L['cost_theor']:.2f} zł/m³ | η: {L['eta']*100:.1f}%", size=9)
+            writeln(f"Strata: {L['loss_per_m3']:.2f} zł/m³ | Budynek: {L['loss_build_m']:,.2f} zł/m-c; {L['loss_build_y']:,.2f} zł/rok", size=9)
+            y -= 2*mm
+            writeln("Wzory audytorskie (straty cyrkulacji wg PN-EN 12831, PN-EN 15316):", bold=True, size=9)
+            writeln("q = 2·π·λ·(t_sr - t_amb) / ln((d+2·ins)/d) — strata liniowa przewodu [W/m]", size=9)
+            writeln("Q_loss = q·L·czas_pracy / 1000 — roczna strata energii [kWh/rok]", size=9)
+            writeln("Przeliczenie kosztów: koszt = Q_loss·0,0036·cena_ciepła_brutto [zł/rok]", size=9)
+            y -= 2*mm
+            writeln("ROI i oszczędności:", bold=True, size=9)
+            writeln("Oszczędność = strata_stara - strata_nowa", size=9)
+            writeln("ROI = oszczędność_roczna / nakład_inwestycyjny", size=9)
+            y -= 2*mm
+            writeln("Scenariusze modernizacji:", bold=True, size=9)
+            writeln(f"70% → koszt {L['cost70']:.2f} zł/m³ | oszcz. {L['save70_m3']:.2f} zł/m³", size=9)
+            writeln(f"80% → koszt {L['cost80']:.2f} zł/m³ | oszcz. {L['save80_m3']:.2f} zł/m³", size=9)
             y -= 2*mm
             writeln("Oprogramowanie: PROF INSTAL - Dla Mieszkańców © 2025 Maciej Ślusarczyk", size=8)
 
