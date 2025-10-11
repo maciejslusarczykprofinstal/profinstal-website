@@ -32,7 +32,7 @@ Kontakt: prof.instal@example.com
 DOCX_AVAILABLE = True
 try:
     from docx import Document as DocumentFactory
-from docx.document import Document as DocxDocument
+    from docx.document import Document as DocxDocument
     from docx.shared import Pt, Inches
     from docx.oxml.ns import qn
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -554,9 +554,11 @@ class App(tk.Tk):
     # ===== DOCX helpers =====
     def _style_docx_times(self, doc: DocxDocument):
         style = doc.styles["Normal"]
-        style.font.name = "Times New Roman"
-        style._element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
-        style.font.size = Pt(11)
+        style.element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
+        style.element.rPr.rFonts.set(qn('w:ascii'), 'Times New Roman')
+        style.element.rPr.rFonts.set(qn('w:hAnsi'), 'Times New Roman')
+        style.element.rPr.rFonts.set(qn('w:cs'), 'Times New Roman')
+        style.element.rPr.sz = Pt(11)
 
     def _add_docx_header(self, doc: DocxDocument):
         # Copyright na początku dokumentu
@@ -786,7 +788,7 @@ class App(tk.Tk):
             doc.add_paragraph(f"{L['bill']:.2f} - {L['cost_theor']:.2f} = {L['loss_per_m3']:.2f} zł")
             
             # Zużycie budynku
-            total_consumption_month = L['loss_build_m'] / L['loss_per_m3'] if L['loss_per_m3'] > 0 else 0
+            total_consumption_month = float(L['loss_build_m']) / float(L['loss_per_m3']) if float(L['loss_per_m3']) > 0 else 0
             total_consumption_year = total_consumption_month * 12
             doc.add_paragraph(f"Z podanych danych wynika całkowite zużycie budynku:")
             doc.add_paragraph(f"~{total_consumption_month:.1f} m³/miesiąc oraz ~{total_consumption_year:.1f} m³/rok")
@@ -795,14 +797,14 @@ class App(tk.Tk):
             doc.add_paragraph("Scenariusze liczone według wzoru: stawka = koszt_teor / η")
             
             doc.add_paragraph(f"70% sprawności:")
-            cost70_calc = L['cost_theor'] / 0.70
-            save70_calc = L['bill'] - cost70_calc
-            doc.add_paragraph(f"{L['cost_theor']:.2f} / 0,7 = {cost70_calc:.2f} zł/m³ → oszczędność {L['bill']:.2f} - {cost70_calc:.2f} = {save70_calc:.2f} zł/m³")
+            cost70_calc = float(L['cost_theor']) / 0.70
+            save70_calc = float(L['bill']) - cost70_calc
+            doc.add_paragraph(f"{float(L['cost_theor']):.2f} / 0,7 = {cost70_calc:.2f} zł/m³ → oszczędność {float(L['bill']):.2f} - {cost70_calc:.2f} = {save70_calc:.2f} zł/m³")
             
             doc.add_paragraph(f"80% sprawności:")
-            cost80_calc = L['cost_theor'] / 0.80
-            save80_calc = L['bill'] - cost80_calc
-            doc.add_paragraph(f"{L['cost_theor']:.2f} / 0,8 = {cost80_calc:.2f} zł/m³ → oszczędność {L['bill']:.2f} - {cost80_calc:.2f} = {save80_calc:.2f} zł/m³")
+            cost80_calc = float(L['cost_theor']) / 0.80
+            save80_calc = float(L['bill']) - cost80_calc
+            doc.add_paragraph(f"{float(L['cost_theor']):.2f} / 0,8 = {cost80_calc:.2f} zł/m³ → oszczędność {float(L['bill']):.2f} - {cost80_calc:.2f} = {save80_calc:.2f} zł/m³")
             
             doc.add_paragraph(f"Oszczędność budynku (mies.): 70% → {L['save70_build_m']:,.2f} zł; 80% → {L['save80_build_m']:,.2f} zł.")
             doc.add_paragraph(f"Oszczędność budynku (rok):   70% → {L['save70_build_y']:,.2f} zł; 80% → {L['save80_build_y']:,.2f} zł.")
@@ -817,7 +819,7 @@ class App(tk.Tk):
             self._legal_basis_docx(doc)
 
             doc.add_heading("6. Ocena ekspercka i zalecenia", level=1)
-            eta_pct = L['eta']*100
+            eta_pct = float(L['eta'])*100
             if eta_pct >= 70:
                 ocena = ("Sprawność oceniona jako dobra. Rekomenduję utrzymanie parametrów, okresowe równoważenie cyrkulacji, "
                          "monitoring temperatur (zasilanie/powrót CWU) i audyt co 12 miesięcy.")
@@ -940,8 +942,8 @@ class App(tk.Tk):
         ttk.Label(left, text=" • Wszelkie prawa zastrzeżone", style="Info.TLabel", font=(FONT_FAMILY, 8)).pack(side="left")
         center = ttk.Frame(footer, style="Bg.TFrame"); center.grid(row=0, column=1, padx=30)
         ttk.Label(center, text="Model obliczeniowy chroniony prawami autorskimi", style="Info.TLabel", font=(FONT_FAMILY, 8)).pack()
-    right = ttk.Frame(footer, style="Bg.TFrame"); right.grid(row=0, column=2, sticky="e")
-    ttk.Label(right, text="prof.instal@example.com", style="Info.TLabel", font=(FONT_FAMILY, 10)).pack(side="right", padx=(0,12))
+        right = ttk.Frame(footer, style="Bg.TFrame"); right.grid(row=0, column=2, sticky="e")
+        ttk.Label(right, text="prof.instal@example.com", style="Info.TLabel", font=(FONT_FAMILY, 10)).pack(side="right", padx=(0,12))
 
 if __name__ == "__main__":
     App().mainloop()

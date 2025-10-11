@@ -89,6 +89,207 @@
       </div>
     </header>
 
+    <!-- ETAP 1: Formularz kosztów odbiorcy końcowego na górze panelu -->
+    <section class="card section" style="margin-bottom:18px">
+      <h3>Koszty odbiorcy końcowego</h3>
+      <div class="row-4">
+        <div>
+          <label>Zużycie wody (miesięczne) [m³]</label>
+          <input id="input_V_m3" type="number" step="0.01" value="10" />
+        </div>
+        <div>
+          <label>Cena podgrzania 1 m³ wody [zł/m³]</label>
+          <input id="input_cena_m3" type="number" step="0.01" value="58.86" />
+        </div>
+        <div>
+          <label>Koszt z faktury (miesięczny) [zł]</label>
+          <input id="input_koszt_faktura" type="number" step="0.01" value="900" />
+        </div>
+      </div>
+      <div class="actions" style="margin-top:10px">
+        <button id="btnAnalizaStrat" class="btn btn-primary" type="button">Przeprowadź analizę strat</button>
+      </div>
+    </section>
+    <!-- ETAP 2: Wybór miasta i automatyczna cena za GJ -->
+    <section class="card section" style="margin-bottom:18px">
+      <h3>Wybór miasta i cena za GJ</h3>
+      <div class="row-4">
+        <div>
+          <label>Miasto</label>
+          <select id="input_miasto">
+            <option value="Kraków" selected>Kraków</option>
+            <option value="Warszawa">Warszawa</option>
+            <option value="Lublin">Lublin</option>
+            <option value="Katowice">Katowice</option>
+          </select>
+        </div>
+        <div>
+          <label>Cena za 1 GJ [zł/GJ]</label>
+          <input id="input_cena_GJ" type="number" step="0.01" value="82.17" />
+        </div>
+      </div>
+    </section>
+    <script>
+const cityPrices = {
+  'Kraków': 82.17,
+  'Warszawa': 85.00,
+  'Lublin': 65.50,
+  'Katowice': 70.00
+};
+document.getElementById('input_miasto').addEventListener('change', function() {
+  const miasto = this.value;
+  document.getElementById('input_cena_GJ').value = cityPrices[miasto] || 82.17;
+});
+</script>
+    <!-- ETAP 3: Analiza strat na budynku i prezentacja wyników pod formularzem -->
+    <section class="card section" id="analizaStratWyniki" style="margin-bottom:18px; display:none;">
+      <h3>Analiza strat na budynku</h3>
+      <div class="row-4">
+        <div>
+          <label>Koszt teoretyczny podgrzania wody</label>
+          <div class="val" id="wynik_koszt_teoretyczny">– zł</div>
+        </div>
+        <div>
+          <label>Całkowite straty na budynku</label>
+          <div class="val" id="wynik_strata_zl">– zł</div>
+        </div>
+        <div>
+          <label>Energia strat [GJ]</label>
+          <div class="val" id="wynik_energia_straty_GJ">– GJ</div>
+        </div>
+        <div>
+          <label>Udział strat [%]</label>
+          <div class="val" id="wynik_udzial_strat">– %</div>
+        </div>
+      </div>
+    </section>
+    <script>
+function analizaStrat(){
+  const V_m3 = +document.getElementById('input_V_m3').value || 0;
+  const cena_m3 = +document.getElementById('input_cena_m3').value || 0;
+  const koszt_faktura = +document.getElementById('input_koszt_faktura').value || 0;
+  const cena_GJ = +document.getElementById('input_cena_GJ').value || 0;
+  // Obliczenia
+  const koszt_teoretyczny = V_m3 * cena_m3;
+  const strata_zl = koszt_faktura - koszt_teoretyczny;
+  const energia_straty_GJ = cena_GJ > 0 ? strata_zl / cena_GJ : 0;
+  const udzial_strat = koszt_faktura > 0 ? 100 * strata_zl / koszt_faktura : 0;
+  // Prezentacja
+  document.getElementById('wynik_koszt_teoretyczny').textContent = koszt_teoretyczny.toFixed(2) + ' zł';
+  document.getElementById('wynik_strata_zl').textContent = strata_zl.toFixed(2) + ' zł';
+  document.getElementById('wynik_energia_straty_GJ').textContent = energia_straty_GJ.toFixed(2) + ' GJ';
+  document.getElementById('wynik_udzial_strat').textContent = udzial_strat.toFixed(2) + ' %';
+  document.getElementById('analizaStratWyniki').style.display = '';
+}
+document.getElementById('btnAnalizaStrat').addEventListener('click', analizaStrat);
+</script>
+
+    <!-- ETAP 4: Wykres kołowy energia użyteczna vs energia strat -->
+    <section class="card section" id="analizaStratWykres" style="margin-bottom:18px; display:none; text-align:center; max-width:320px; margin-left:auto; margin-right:auto;">
+      <h3>Wykres kołowy: energia użyteczna vs energia strat</h3>
+      <canvas id="pieStraty" width="220" height="220" style="max-width:100%;"></canvas>
+    </section>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+function rysujWykresStrat(){
+  const V_m3 = +document.getElementById('input_V_m3').value || 0;
+  const cena_m3 = +document.getElementById('input_cena_m3').value || 0;
+  const koszt_faktura = +document.getElementById('input_koszt_faktura').value || 0;
+  const koszt_teoretyczny = V_m3 * cena_m3;
+  const strata_zl = koszt_faktura - koszt_teoretyczny;
+  // Energia użyteczna vs energia strat (w zł)
+  const energiaUzyteczna = koszt_teoretyczny;
+  const energiaStraty = strata_zl > 0 ? strata_zl : 0;
+  // Wykres
+  const ctx = document.getElementById('pieStraty').getContext('2d');
+  if(window.pieStratyChart) window.pieStratyChart.destroy();
+  window.pieStratyChart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: ['Energia użyteczna', 'Energia strat'],
+      datasets: [{
+        data: [energiaUzyteczna, energiaStraty],
+        backgroundColor: ['#10b981','#f43f5e'],
+        borderColor: '#fff',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: function(context){
+              return `${context.label}: ${context.parsed.toFixed(2)} zł`;
+            }
+          }
+        }
+      }
+    }
+  });
+  document.getElementById('analizaStratWykres').style.display = '';
+}
+document.getElementById('btnAnalizaStrat').addEventListener('click', rysujWykresStrat);
+</script>
+
+    <!-- Wykres kołowy: energia użyteczna vs straty -->
+    <div style="max-width:420px;margin:24px auto 0 auto;text-align:center">
+      <canvas id="pieStraty" width="400" height="400"></canvas>
+    </div>
+    <script>
+function analizaStrat(){
+  // Pobierz dane z pól
+  const V_m3 = +document.getElementById('V_m3').value||0;
+  const cena_m3 = +document.getElementById('cena_m3').value||0;
+  const koszt_faktura = +document.getElementById('koszt_faktura').value||0;
+  const cena_GJ = +document.getElementById('cena_GJ').value||0;
+  // Obliczenia
+  const koszt_teoretyczny = V_m3 * cena_m3;
+  const strata_zl = koszt_faktura - koszt_teoretyczny;
+  const energia_straty_GJ = cena_GJ > 0 ? strata_zl / cena_GJ : 0;
+  const energia_straty_kWh = energia_straty_GJ * 277.78;
+  const udzial_strat = koszt_faktura > 0 ? 100 * strata_zl / koszt_faktura : 0;
+  // Wyniki
+  let html = `<b>Koszt teoretyczny podgrzania wody:</b> ${koszt_teoretyczny.toFixed(2)} zł<br>`+
+             `<b>Całkowite straty na budynku:</b> ${strata_zl.toFixed(2)} zł<br>`+
+             `<b>Energia strat:</b> ${energia_straty_GJ.toFixed(2)} GJ (${energia_straty_kWh.toFixed(2)} kWh)<br>`+
+             `<b>Udział strat:</b> ${udzial_strat.toFixed(2)} %`;
+  document.getElementById('analizaStratWyniki').innerHTML = html;
+  // Wykres kołowy: energia użyteczna vs straty
+  if(window.pieChartStraty){ window.pieChartStraty.destroy(); }
+  const ctx = document.getElementById('pieStraty').getContext('2d');
+  window.pieChartStraty = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: ['Energia użyteczna', 'Energia strat'],
+      datasets: [{
+        data: [koszt_teoretyczny, strata_zl],
+        backgroundColor: ['#10b981','#f43f5e'],
+        borderColor: '#fff',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: function(context){
+              return `${context.label}: ${context.parsed.toFixed(2)} zł`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+// Automatyczne przeliczanie przy zmianie pól
+['V_m3','cena_m3','koszt_faktura','cena_GJ'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', analizaStrat);
+});
+window.addEventListener('DOMContentLoaded', analizaStrat);
+</script>
+
     <div class="grid">
       <!-- LEWA kolumna: kalkulatory -->
       <section class="card section" id="calc">
@@ -110,8 +311,15 @@
             <input id="Tout" type="number" step="0.1" value="55" />
           </div>
           <div>
-            <label>Cena ciepła [zł/kWh]</label>
-            <input id="heatPrice" type="number" step="0.01" min="0" value="0.45" />
+            <label>Cena ciepła [zł/GJ]</label>
+            <input id="heatPriceGJ" type="number" step="0.01" min="0" value="82.17" />
+            <label>Miasto</label>
+            <select id="citySelect">
+              <option value="Kraków" selected>Kraków</option>
+              <option value="Warszawa">Warszawa</option>
+              <option value="Lublin">Lublin</option>
+              <option value="Katowice">Katowice</option>
+            </select>
           </div>
         </div>
         <p class="muted">Praktyczne przybliżenie: <b>E<sub>użyteczna</sub> [kWh]</b> ≈ V · ΔT · 1,163 (ρ≈1000 kg/m³, c≈4,186 kJ/kgK).</p>
@@ -274,17 +482,34 @@
 
         <!-- KPI rozszerzone -->
         <div class="kpis">
-          <div class="kpi"><div class="label">E użyteczna CWU (mies.)</div><div class="val" id="kpi_Euse">– kWh</div></div>
-          <div class="kpi"><div class="label">Strata przygotowania</div><div class="val" id="kpi_EprepLoss">– kWh</div></div>
-          <div class="kpi warn"><div class="label">Straty cyrkulacji</div><div class="val" id="kpi_Qcirc">– kWh</div></div>
-          <div class="kpi warn"><div class="label">Straty zasobnika</div><div class="val" id="kpi_Qtank">– kWh</div></div>
-          <div class="kpi"><div class="label">Razem energia cieplna</div><div class="val" id="kpi_EheatTot">– kWh</div></div>
-          <div class="kpi"><div class="label">Energia pomp</div><div class="val" id="kpi_Epump">– kWh</div></div>
-          <div class="kpi"><div class="label">Koszt ciepła</div><div class="val" id="kpi_costHeat">– zł</div></div>
-          <div class="kpi"><div class="label">Koszt pomp</div><div class="val" id="kpi_costPump">– zł</div></div>
-          <div class="kpi"><div class="label">Oszczędność mies.</div><div class="val" id="kpi_savMonth">– zł</div></div>
-          <div class="kpi"><div class="label">Oszczędność 12 mies.</div><div class="val" id="kpi_savYear">– zł</div></div>
-          <div class="kpi bad"><div class="label">Udziały: prep / zas. / cyrk.</div><div class="val" id="kpi_shares">– / – / – %</div></div>
+          <div class="kpi"><div class="label"><span class="formula"></span>E<sub>użyteczna</sub> = V · ΔT · 1,163 [kWh/mies.]</span><br>E użyteczna CWU (mies.)</div><div class="val" id="kpi_Euse">– kWh</div></div>
+          <div class="kpi"><div class="label"><span class="formula">E<sub>we</sub> = E<sub>użyteczna</sub> / η, strata = E<sub>we</sub> − E<sub>użyteczna</sub></span><br>Strata przygotowania</div><div class="val" id="kpi_EprepLoss">– kWh</div></div>
+          <div class="kpi warn"><div class="label"><span class="formula">q = 2·π·λ·(t<sub>sr</sub> − t<sub>amb</sub>) / ln((d+2·ins)/d)</span><br>Straty cyrkulacji</div><div class="val" id="kpi_Qcirc">– kWh</div></div>
+          <div class="kpi warn"><div class="label"><span class="formula">Q<sub>tank</sub> = UA·(T<sub>stor</sub>−T<sub>amb</sub>)·h·dni/1000</span><br>Straty zasobnika</div><div class="val" id="kpi_Qtank">– kWh</div></div>
+          <div class="kpi"><div class="label"><span class="formula">E<sub>heatTot</sub> = E<sub>we</sub> + Q<sub>tank</sub> + Q<sub>circ</sub></span><br>Razem energia cieplna</div><div class="val" id="kpi_EheatTot">– kWh</div></div>
+          <div class="kpi"><div class="label"><span class="formula">E<sub>pump</sub> = P · h · dni</span><br>Energia pomp</div><div class="val" id="kpi_Epump">– kWh</div></div>
+          <div class="kpi"><div class="label"><span class="formula">Koszt ciepła = (E<sub>we</sub> + Q<sub>tank</sub> + Q<sub>circ</sub>) · cena</span><br>Koszt ciepła</div><div class="val" id="kpi_costHeat">– zł</div></div>
+          <div class="kpi"><div class="label"><span class="formula">Koszt pomp = E<sub>pump</sub> · cena_el</span><br>Koszt pomp</div><div class="val" id="kpi_costPump">– zł</div></div>
+          <div class="kpi"><div class="label"><span class="formula">Oszczędność = koszt_stary − koszt_nowy</span><br>Oszczędność mies.</div><div class="val" id="kpi_savMonth">– zł</div></div>
+          <div class="kpi"><div class="label"><span class="formula">Oszczędność roczna = oszczędność_mies. · 12</span><br>Oszczędność 12 mies.</div><div class="val" id="kpi_savYear">– zł</div></div>
+          <div class="kpi bad"><div class="label"><span class="formula">Udziały = (prep / zas. / cyrk.) [%]</span><br>Udziały: prep / zas. / cyrk.</div><div class="val" id="kpi_shares">– / – / – %</div></div>
+          <!-- Nowe KPI: straty na budynku i podział na sektory -->
+          <div class="kpi"><div class="label">Całkowite straty na budynku</div><div class="val" id="kpi_totalLossCost">– zł</div></div>
+          <div class="kpi"><div class="label">Straty: przygotowanie</div><div class="val" id="kpi_lossPrep">– zł</div></div>
+          <div class="kpi"><div class="label">Straty: zasobnik</div><div class="val" id="kpi_lossTank">– zł</div></div>
+          <div class="kpi"><div class="label">Straty: cyrkulacja</div><div class="val" id="kpi_lossCirc">– zł</div></div>
+          <div class="kpi"><div class="label">Straty: przewody CWU</div><div class="val" id="kpi_lossUseful">– zł</div></div>
+        </div>
+        <!-- Pole do wprowadzania ceny za 1 m³ wody -->
+        <div style="margin:10px 0 18px 0">
+          <label>Cena podgrzania 1 m³ wody [zł/m³]</label>
+          <input id="pricePerM3" type="number" step="0.01" value="58.86" />
+        </div>
+        <!-- Automatyczne podsumowanie tekstowe -->
+        <div id="autoSummary" style="margin:18px 0;font-size:1.1rem;color:#0b735f;font-weight:600;text-align:center"></div>
+        <div class="actions" style="margin:10px 0 0 0;display:flex;gap:10px;justify-content:center">
+          <button id="btnExportKPIcsv" class="btn btn-ghost" type="button">Eksportuj wyniki (CSV)</button>
+          <button id="btnExportKPIpdf" class="btn btn-ghost" type="button">Eksportuj wyniki (PDF)</button>
         </div>
       </section>
 
@@ -382,443 +607,500 @@
             <td>Pompy cyrkulacyjne / przetwornice</td>
             <td><input data-role="qty" type="number" step="1" value="2" /></td>
             <td>kpl.</td>
-            <td class="right"><input data-role="mat" type="number" step="1" value="3000" /></td>
-            <td class="right"><input data-role="lab" type="number" step="1" value="800" /></td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="1500" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="300" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Wymiennik ciepła (CWU)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="4500" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="900" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Regulator temperatury (CWU)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="300" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="60" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Inne — opis</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>szt.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="0" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="0" /></td>
             <td class="num" data-role="sum">–</td>
             <td class="right"><input data-role="use" type="checkbox" checked /></td>
           </tr>
         </tbody>
-        <tfoot>
-          <tr>
-            <th colspan="5" class="right">Suma CAPEX:</th>
-            <th class="num" id="capexTotal">–</th>
-            <th></th>
-          </tr>
-        </tfoot>
       </table>
 
-      <div class="actions" style="margin:8px 0">
-        <button id="btnAddItem" class="btn btn-ghost" type="button">Dodaj pozycję „Inne”</button>
-        <button id="btnCapexRecalc" class="btn btn-ghost" type="button">Przelicz CAPEX</button>
-      </div>
-
-      <h4>6) OPEX, horyzont i inflacja</h4>
-      <div class="row-4">
-        <div>
-          <label>Zmiana OPEX (serwis/utrzymanie) [zł/rok]</label>
-          <input id="opexDelta" type="number" step="1" value="0" />
-        </div>
-        <div>
-          <label>Horyzont analizy [lata]</label>
-          <input id="horizon" type="number" step="1" value="10" />
-        </div>
-        <div>
-          <label>Stopa dyskontowa r [%/rok]</label>
-          <input id="discount" type="number" step="0.1" value="7" />
-        </div>
-        <div>
-          <label>Inflacja cen energii [%/rok]</label>
-          <input id="inflation" type="number" step="0.1" value="3" />
-        </div>
-      </div>
-
-      <h4>7) Oszczędności</h4>
-      <div class="row">
-        <div>
-          <label><input id="useScenarioSavings" type="checkbox" checked /> Użyj oszczędności z kalkulatora (pełne: przygotowanie+zasobnik+cyrkulacja+pomp)</label>
-          <div class="muted">Wartość: <span id="savYearFromCalc">–</span> zł/rok</div>
-        </div>
-        <div>
-          <label>Lub wpisz ręcznie oszczędność w roku 1 [zł/rok]</label>
-          <input id="manualSaving" type="number" step="1" value="0" />
-        </div>
-      </div>
-
       <div class="actions" style="margin-top:10px">
-        <button id="btnROI" class="btn btn-primary" type="button">Policz ROI</button>
-        <button id="btnCopyROI" class="btn btn-ghost" type="button">Kopiuj ROI</button>
-        <button id="btnDownloadROI" class="btn btn-ghost" type="button">Pobierz ROI .doc (HTML)</button>
+        <button id="btnCapexRecalc" class="btn btn-primary" type="button">Przelicz CAPEX</button>
+        <button id="btnAddItem" class="btn btn-ghost" type="button">Dodaj pozycję</button>
       </div>
 
       <hr class="sep">
 
+      <!-- KPI CAPEX -->
       <div class="kpis">
-        <div class="kpi"><div class="label">CAPEX (suma)</div><div class="val" id="kpi_capex">– zł</div></div>
-        <div class="kpi"><div class="label">Oszczędność rok 1 (po OPEX)</div><div class="val" id="kpi_sav1">– zł/rok</div></div>
-        <div class="kpi"><div class="label">Payback</div><div class="val" id="kpi_payback">– lat</div></div>
-        <div class="kpi"><div class="label">Discounted payback</div><div class="val" id="kpi_dpb">– lat</div></div>
-        <div class="kpi"><div class="label">NPV</div><div class="val" id="kpi_npv">– zł</div></div>
-        <div class="kpi"><div class="label">IRR</div><div class="val" id="kpi_irr">– %</div></div>
+        <div class="kpi"><div class="label">Razem CAPEX</div><div class="val" id="capexTotal">– zł</div></div>
       </div>
     </section>
 
-    <footer>
-      © PROF INSTAL – Wszelkie prawa zastrzeżone · Panel audytorski · NR KONTA: 00 0000 0000 0000 0000 0000 0000
-    </footer>
-  </div>
+    <!-- ROI -->
+    <section class="card section" id="roi" style="margin-top:18px">
+      <h3>ROI – Nakłady (CSV), CAPEX/OPEX i wskaźniki finansowe</h3>
 
-  <script>
-    const $ = (id)=>document.getElementById(id);
-    const fmt0 = new Intl.NumberFormat('pl-PL',{minimumFractionDigits:0, maximumFractionDigits:0});
-    const fmt2 = new Intl.NumberFormat('pl-PL',{minimumFractionDigits:2, maximumFractionDigits:2});
+      <h4>5) Nakłady inwestycyjne (CAPEX)</h4>
+      <div class="actions" style="margin-bottom:8px">
+        <input type="file" id="csvInput" accept=".csv" />
+        <button id="btnImportCSV" class="btn btn-ghost" type="button">Importuj CSV kosztorysu</button>
+        <button id="btnExportCSV" class="btn btn-ghost" type="button">Eksportuj CSV (szablon)</button>
+      </div>
 
-    // —— Energetyka ——
-    function energyDHW(V, Tin, Tout){ return V * (Tout - Tin) * 1.163; } // kWh/mies.
-    function circLoss(Din_mm, tIns_mm, lambda, hExt, Tpipe, Tamb, L, hDay, days){
-      const r_in = (Din_mm/1000)/2;
-      const r_out = r_in + (tIns_mm/1000);
-      if (r_in <= 0 || r_out <= r_in || lambda <= 0 || hExt <= 0) return { ql: 0, Q: 0 };
-      const Rcond = Math.log(r_out/r_in) / (2*Math.PI*lambda);
-      const Rext  = 1 / (hExt * 2*Math.PI*r_out);
-      const Rtot  = Rcond + Rext;
-      const ql = (Tpipe - Tamb) / Rtot; // W/m
-      const QkWh = ql * L * (hDay*days) / 1000; // kWh
-      return { ql, Q: QkWh };
-    }
-    function tankLoss(UA, Tstor, Tamb, hotHours, days){ return UA * (Tstor - Tamb) * hotHours * days / 1000; } // kWh/mies.
-    function pumpEnergy(P_W, hDay, days){ return (P_W/1000) * hDay * days; } // kWh
+      <table class="clean" id="capexTable">
+        <thead>
+          <tr>
+            <th>Pozycja</th>
+            <th>Ilość</th>
+            <th>Jedn.</th>
+            <th class="right">Materiał [zł/jedn.]</th>
+            <th class="right">Robocizna [zł/jedn.]</th>
+            <th class="right">Razem [zł]</th>
+            <th>Uwzględnij</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Izolacja przewodów (wg L)</td>
+            <td><input data-role="qty" type="number" step="1" value="450" /></td>
+            <td>m</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="75" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="45" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Równoważenie — zawory termostatyczne</td>
+            <td><input data-role="qty" type="number" step="1" value="40" /></td>
+            <td>szt.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="280" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="60" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Automatyka CWU (sterownik + czujniki)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="12000" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="3500" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Monitoring ΔT + rejestracja</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="8000" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="1500" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Pompy cyrkulacyjne / przetwornice</td>
+            <td><input data-role="qty" type="number" step="1" value="2" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="1500" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="300" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Wymiennik ciepła (CWU)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="4500" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="900" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Regulator temperatury (CWU)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="300" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="60" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Inne — opis</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>szt.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="0" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="0" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+        </tbody>
+      </table>
 
-    function calc(){
-      // Inputs
-      const V = +$('V').value||0, Tin= +$('Tin').value||0, Tout= +$('Tout').value||0;
-      const heatPrice= +$('heatPrice').value||0;
+      <div class="actions" style="margin-top:10px">
+        <button id="btnCapexRecalc" class="btn btn-primary" type="button">Przelicz CAPEX</button>
+        <button id="btnAddItem" class="btn btn-ghost" type="button">Dodaj pozycję</button>
+      </div>
 
-      const Din= +$('Din').value||0, tIns= +$('tIns').value||0, lambda= +$('lambda').value||0.035, hExt= +$('hExt').value||7.7;
-      const Tpipe= +$('Tpipe').value||0, Tamb= +$('Tamb').value||0, L= +$('L').value||0, hDay= +$('hDay').value||0;
+      <hr class="sep">
 
-      const UA= +$('UA').value||0, Tstor= +$('Tstor').value||0, TambTank= +$('TambTank').value||0, hotHours= +$('hotHours').value||0;
-      const etaPrep= Math.max(0.5, Math.min(1, +$('etaPrep').value||0.9));
+      <!-- KPI CAPEX -->
+      <div class="kpis">
+        <div class="kpi"><div class="label">Razem CAPEX</div><div class="val" id="capexTotal">– zł</div></div>
+      </div>
+    </section>
 
-      const P_W= +$('Ppump').value||0, Ph= +$('P_hDay').value||0;
-      const days= +$('days').value||30, elPrice= +$('elPrice').value||0.9;
-      $('days2').value = days; $('elPrice2').value = elPrice;
+    <!-- ROI -->
+    <section class="card section" id="roi" style="margin-top:18px">
+      <h3>ROI – Nakłady (CSV), CAPEX/OPEX i wskaźniki finansowe</h3>
 
-      // Baseline energies
-      const E_use = energyDHW(V, Tin, Tout);                  // użyteczna
-      const E_we  = (etaPrep>0)? E_use/etaPrep : E_use;       // wejściowa (zakupiona) na przygotowanie
-      const E_prepLoss = Math.max(0, E_we - E_use);           // straty przygotowania
-      const Q_circ = circLoss(Din, tIns, lambda, hExt, Tpipe, Tamb, L, hDay, days).Q;
-      const Q_tank = tankLoss(UA, Tstor, TambTank, hotHours, days);
-      const E_heat_total = E_we + Q_tank + Q_circ;            // całkowita energia cieplna
-      const costHeat = E_heat_total * heatPrice;
+      <h4>5) Nakłady inwestycyjne (CAPEX)</h4>
+      <div class="actions" style="margin-bottom:8px">
+        <input type="file" id="csvInput" accept=".csv" />
+        <button id="btnImportCSV" class="btn btn-ghost" type="button">Importuj CSV kosztorysu</button>
+        <button id="btnExportCSV" class="btn btn-ghost" type="button">Eksportuj CSV (szablon)</button>
+      </div>
 
-      const E_pump = pumpEnergy(P_W, Ph, days);
-      const costPump = E_pump * elPrice;
+      <table class="clean" id="capexTable">
+        <thead>
+          <tr>
+            <th>Pozycja</th>
+            <th>Ilość</th>
+            <th>Jedn.</th>
+            <th class="right">Materiał [zł/jedn.]</th>
+            <th class="right">Robocizna [zł/jedn.]</th>
+            <th class="right">Razem [zł]</th>
+            <th>Uwzględnij</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Izolacja przewodów (wg L)</td>
+            <td><input data-role="qty" type="number" step="1" value="450" /></td>
+            <td>m</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="75" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="45" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Równoważenie — zawory termostatyczne</td>
+            <td><input data-role="qty" type="number" step="1" value="40" /></td>
+            <td>szt.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="280" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="60" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Automatyka CWU (sterownik + czujniki)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="12000" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="3500" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Monitoring ΔT + rejestracja</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="8000" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="1500" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Pompy cyrkulacyjne / przetwornice</td>
+            <td><input data-role="qty" type="number" step="1" value="2" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="1500" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="300" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Wymiennik ciepła (CWU)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="4500" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="900" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Regulator temperatury (CWU)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="300" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="60" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Inne — opis</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>szt.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="0" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="0" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+        </tbody>
+      </table>
 
-      // Scenario
-      const tInsNew= +$('tInsNew').value||tIns, balPct= Math.max(0, Math.min(100, +$('balPct').value||0));
-      const hDayNew= +$('hDayNew').value||hDay, pumpSavePct= Math.max(0, Math.min(100, +$('pumpSavePct').value||0));
-      const UAnew= +$('UAnew').value||UA, dTstorNight= +$('dTstorNight').value||0, hotHoursNew= +$('hotHoursNew').value||hotHours;
-      const etaPrepNew= Math.max(0.5, Math.min(1, +$('etaPrepNew').value||etaPrep));
+      <div class="actions" style="margin-top:10px">
+        <button id="btnCapexRecalc" class="btn btn-primary" type="button">Przelicz CAPEX</button>
+        <button id="btnAddItem" class="btn btn-ghost" type="button">Dodaj pozycję</button>
+      </div>
 
-      const circNew = circLoss(Din, tInsNew, lambda, hExt, Tpipe, Tamb, L, hDayNew, days);
-      const Q_circ_bal = Math.max(0, circNew.Q * (1 - balPct/100));
+      <hr class="sep">
 
-      const TstorNew = Math.max(30, Tstor - dTstorNight);
-      const Q_tank_new = tankLoss(UAnew, TstorNew, TambTank, hotHoursNew, days);
+      <!-- KPI CAPEX -->
+      <div class="kpis">
+        <div class="kpi"><div class="label">Razem CAPEX</div><div class="val" id="capexTotal">– zł</div></div>
+      </div>
+    </section>
 
-      const E_we_new = (etaPrepNew>0)? E_use/etaPrepNew : E_use;
-      const E_heat_total_new = E_we_new + Q_tank_new + Q_circ_bal;
-      const costHeatNew = E_heat_total_new * heatPrice;
+    <!-- ROI -->
+    <section class="card section" id="roi" style="margin-top:18px">
+      <h3>ROI – Nakłady (CSV), CAPEX/OPEX i wskaźniki finansowe</h3>
 
-      const E_pump_new = pumpEnergy(P_W*(1 - pumpSavePct/100), hDayNew, days);
-      const costPumpNew = E_pump_new * elPrice;
+      <h4>5) Nakłady inwestycyjne (CAPEX)</h4>
+      <div class="actions" style="margin-bottom:8px">
+        <input type="file" id="csvInput" accept=".csv" />
+        <button id="btnImportCSV" class="btn btn-ghost" type="button">Importuj CSV kosztorysu</button>
+        <button id="btnExportCSV" class="btn btn-ghost" type="button">Eksportuj CSV (szablon)</button>
+      </div>
 
-      // Savings
-      const saveHeatMonth = Math.max(0, costHeat - costHeatNew);
-      const savePumpMonth = Math.max(0, costPump - costPumpNew);
-      const savMonth = saveHeatMonth + savePumpMonth;
-      const savYear  = savMonth * 12;
+      <table class="clean" id="capexTable">
+        <thead>
+          <tr>
+            <th>Pozycja</th>
+            <th>Ilość</th>
+            <th>Jedn.</th>
+            <th class="right">Materiał [zł/jedn.]</th>
+            <th class="right">Robocizna [zł/jedn.]</th>
+            <th class="right">Razem [zł]</th>
+            <th>Uwzględnij</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Izolacja przewodów (wg L)</td>
+            <td><input data-role="qty" type="number" step="1" value="450" /></td>
+            <td>m</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="75" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="45" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Równoważenie — zawory termostatyczne</td>
+            <td><input data-role="qty" type="number" step="1" value="40" /></td>
+            <td>szt.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="280" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="60" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Automatyka CWU (sterownik + czujniki)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="12000" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="3500" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Monitoring ΔT + rejestracja</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="8000" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="1500" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Pompy cyrkulacyjne / przetwornice</td>
+            <td><input data-role="qty" type="number" step="1" value="2" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="1500" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="300" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Wymiennik ciepła (CWU)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="4500" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="900" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Regulator temperatury (CWU)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="300" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="60" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Inne — opis</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>szt.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="0" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="0" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+        </tbody>
+      </table>
 
-      // Shares
-      const shPrep = E_heat_total>0 ? (E_prepLoss/E_heat_total*100) : 0;
-      const shTank = E_heat_total>0 ? (Q_tank/E_heat_total*100) : 0;
-      const shCirc = E_heat_total>0 ? (Q_circ/E_heat_total*100) : 0;
+      <div class="actions" style="margin-top:10px">
+        <button id="btnCapexRecalc" class="btn btn-primary" type="button">Przelicz CAPEX</button>
+        <button id="btnAddItem" class="btn btn-ghost" type="button">Dodaj pozycję</button>
+      </div>
 
-      // KPIs
-      $('kpi_Euse').textContent = fmt2.format(E_use)+' kWh';
-      $('kpi_EprepLoss').textContent = fmt2.format(E_prepLoss)+' kWh';
-      $('kpi_Qcirc').textContent = fmt2.format(Q_circ)+' kWh';
-      $('kpi_Qtank').textContent = fmt2.format(Q_tank)+' kWh';
-      $('kpi_EheatTot').textContent = fmt2.format(E_heat_total)+' kWh';
-      $('kpi_Epump').textContent = fmt2.format(E_pump)+' kWh';
-      $('kpi_costHeat').textContent = fmt2.format(costHeat)+' zł';
-      $('kpi_costPump').textContent = fmt2.format(costPump)+' zł';
-      $('kpi_savMonth').textContent = fmt2.format(savMonth)+' zł';
-      $('kpi_savYear').textContent = fmt2.format(savYear)+' zł';
-      $('kpi_shares').textContent = `${fmt2.format(shPrep)} / ${fmt2.format(shTank)} / ${fmt2.format(shCirc)} %`;
+      <hr class="sep">
 
-      // Warn colors by share of losses (sum)
-      const warnEl = $('kpi_shares').parentElement.parentElement;
-      warnEl.classList.remove('warn','bad');
-      const totalLossShare = shPrep + shTank + shCirc;
-      if (totalLossShare >= 40) warnEl.classList.add('bad'); else if (totalLossShare >= 25) warnEl.classList.add('warn');
+      <!-- KPI CAPEX -->
+      <div class="kpis">
+        <div class="kpi"><div class="label">Razem CAPEX</div><div class="val" id="capexTotal">– zł</div></div>
+      </div>
+    </section>
 
-      // Save context for ROI
-      window.__aud = {
-        E_use, E_we, E_prepLoss, Q_circ, Q_tank, E_heat_total, costHeat, E_pump, costPump,
-        E_heat_total_new, costHeatNew, E_pump_new, costPumpNew,
-        savMonth, savYear,
-        params:{V,Tin,Tout,heatPrice,Din,tIns,lambda,hExt,Tpipe,Tamb,L,hDay,UA,Tstor,TambTank,hotHours,etaPrep,P_W,Ph,days,elPrice}
-      };
+    <!-- ROI -->
+    <section class="card section" id="roi" style="margin-top:18px">
+      <h3>ROI – Nakłady (CSV), CAPEX/OPEX i wskaźniki finansowe</h3>
 
-      $('savYearFromCalc').textContent = fmt2.format(savYear)+' zł/rok';
+      <h4>5) Nakłady inwestycyjne (CAPEX)</h4>
+      <div class="actions" style="margin-bottom:8px">
+        <input type="file" id="csvInput" accept=".csv" />
+        <button id="btnImportCSV" class="btn btn-ghost" type="button">Importuj CSV kosztorysu</button>
+        <button id="btnExportCSV" class="btn btn-ghost" type="button">Eksportuj CSV (szablon)</button>
+      </div>
 
-      // Synchronizacja CAPEX: długość izolacji
-      const rowIns = document.querySelector('#capexTable tbody tr:first-child [data-role="qty"]');
-      if (rowIns) rowIns.value = fmt0.format(L).replace(/\s/g,'');
-      recalcCapexTable();
-    }
+      <table class="clean" id="capexTable">
+        <thead>
+          <tr>
+            <th>Pozycja</th>
+            <th>Ilość</th>
+            <th>Jedn.</th>
+            <th class="right">Materiał [zł/jedn.]</th>
+            <th class="right">Robocizna [zł/jedn.]</th>
+            <th class="right">Razem [zł]</th>
+            <th>Uwzględnij</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Izolacja przewodów (wg L)</td>
+            <td><input data-role="qty" type="number" step="1" value="450" /></td>
+            <td>m</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="75" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="45" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Równoważenie — zawory termostatyczne</td>
+            <td><input data-role="qty" type="number" step="1" value="40" /></td>
+            <td>szt.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="280" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="60" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Automatyka CWU (sterownik + czujniki)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="12000" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="3500" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Monitoring ΔT + rejestracja</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="8000" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="1500" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Pompy cyrkulacyjne / przetwornice</td>
+            <td><input data-role="qty" type="number" step="1" value="2" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="1500" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="300" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Wymiennik ciepła (CWU)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="4500" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="900" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Regulator temperatury (CWU)</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>kpl.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="300" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="60" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+          <tr>
+            <td>Inne — opis</td>
+            <td><input data-role="qty" type="number" step="1" value="1" /></td>
+            <td>szt.</td>
+            <td class="right"><input data-role="mat" type="number" step="1" value="0" /></td>
+            <td class="right"><input data-role="lab" type="number" step="1" value="0" /></td>
+            <td class="num" data-role="sum">–</td>
+            <td class="right"><input data-role="use" type="checkbox" checked /></td>
+          </tr>
+        </tbody>
+      </table>
 
-    // —— CAPEX table helpers ——
-    function rowSum(tr){
-      const qty = +tr.querySelector('[data-role="qty"]').value || 0;
-      const mat = +tr.querySelector('[data-role="mat"]').value || 0;
-      const lab = +tr.querySelector('[data-role="lab"]').value || 0;
-      const use = tr.querySelector('[data-role="use"]').checked;
-      const sum = qty * (mat + lab);
-      tr.querySelector('[data-role="sum"]').textContent = fmt2.format(sum) + ' zł';
-      return use ? sum : 0;
-    }
-    function recalcCapexTable(){
-      const rows = Array.from(document.querySelectorAll('#capexTable tbody tr'));
-      let capex = 0; rows.forEach(tr=> capex += rowSum(tr));
-      $('capexTotal').textContent = fmt2.format(capex)+' zł';
-      return capex;
-    }
-    document.querySelector('#capexTable tbody').addEventListener('input', recalcCapexTable);
-    document.querySelector('#capexTable tbody').addEventListener('change', recalcCapexTable);
-    $('btnCapexRecalc').addEventListener('click', recalcCapexTable);
-    $('btnAddItem').addEventListener('click', ()=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>Inne — opis</td>
-        <td><input data-role="qty" type="number" step="1" value="1" /></td>
-        <td>szt.</td>
-        <td class="right"><input data-role="mat" type="number" step="1" value="0" /></td>
-        <td class="right"><input data-role="lab" type="number" step="1" value="0" /></td>
-        <td class="num" data-role="sum">–</td>
-        <td class="right"><input data-role="use" type="checkbox" checked /></td>`;
-      document.querySelector('#capexTable tbody').appendChild(tr);
-      recalcCapexTable();
-    });
+      <div class="actions" style="margin-top:10px">
+        <button id="btnCapexRecalc" class="btn btn-primary" type="button">Przelicz CAPEX</button>
+        <button id="btnAddItem" class="btn btn-ghost" type="button">Dodaj pozycję</button>
+      </div>
 
-    // —— CSV import/export ——
-    function detectDelimiter(header){
-      const sc = (header.match(/;/g)||[]).length, cm = (header.match(/,/g)||[]).length;
-      return sc>=cm?';':',';
-    }
-    function splitCSVLine(line, delim){
-      const out=[]; let cur='', q=false;
-      for(let i=0;i<line.length;i++){
-        const c=line[i];
-        if(c==='\"'){ q=!q; continue; }
-        if(c===delim && !q){ out.push(cur); cur=''; } else cur+=c;
-      }
-      out.push(cur);
-      return out.map(s=>s.trim());
-    }
-    function normalize(s){
-      return s.toLowerCase()
-        .replaceAll('ą','a').replaceAll('ć','c').replaceAll('ę','e').replaceAll('ł','l')
-        .replaceAll('ń','n').replaceAll('ó','o').replaceAll('ś','s').replaceAll('ż','z').replaceAll('ź','z')
-        .replace(/\s+/g,'');
-    }
-    function mapColumns(headers){
-      const map={pos:null, qty:null, unit:null, mat:null, lab:null, use:null};
-      headers.forEach((h,i)=>{
-        const n=normalize(h);
-        if(n.startsWith('pozyc')) map.pos=i;
-        else if(n.startsWith('ilos')||n==='qty') map.qty=i;
-        else if(n.startsWith('jed')) map.unit=i;
-        else if(n.startsWith('material')||n==='mat') map.mat=i;
-        else if(n.startsWith('roboc')||n==='lab') map.lab=i;
-        else if(n.startsWith('uwzg')||n==='use'||n==='include') map.use=i;
-      });
-      return map;
-    }
-    function parseBool(v){
-      const s=String(v).toLowerCase().trim();
-      return ['1','t','y','tak','true','x','✓'].includes(s);
-    }
-    function importCSV(text){
-      const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
-      if(!lines.length) return;
-      const delim = detectDelimiter(lines[0]);
-      const headers = splitCSVLine(lines[0], delim);
-      const map = mapColumns(headers);
-      const tb = document.querySelector('#capexTable tbody');
-      tb.innerHTML='';
-      for(let k=1;k<lines.length;k++){
-        const cols = splitCSVLine(lines[k], delim);
-        if(cols.length<2) continue;
-        const pos = cols[map.pos]||'Pozycja';
-        const qty = +cols[map.qty]||0;
-        const unit= cols[map.unit]||'szt.';
-        const mat = +cols[map.mat]||0;
-        const lab = +cols[map.lab]||0;
-        const use = map.use!=null ? parseBool(cols[map.use]) : true;
-        const tr=document.createElement('tr');
-        tr.innerHTML=`
-          <td>${pos}</td>
-          <td><input data-role="qty" type="number" step="0.01" value="${qty}"/></td>
-          <td>${unit}</td>
-          <td class="right"><input data-role="mat" type="number" step="0.01" value="${mat}"/></td>
-          <td class="right"><input data-role="lab" type="number" step="0.01" value="${lab}"/></td>
-          <td class="num" data-role="sum">–</td>
-          <td class="right"><input data-role="use" type="checkbox" ${use?'checked':''}/></td>`;
-        tb.appendChild(tr);
-      }
-      recalcCapexTable();
-    }
-    $('btnImportCSV').addEventListener('click', ()=>{
-      const f=$('csvInput').files[0];
-      if(!f){ alert('Wybierz plik CSV z Excela.'); return; }
-      const r=new FileReader();
-      r.onload=()=>importCSV(r.result);
-      r.readAsText(f,'utf-8');
-    });
-    $('btnExportCSV').addEventListener('click', ()=>{
-      const rows = Array.from(document.querySelectorAll('#capexTable tbody tr'));
-      const head = ['Pozycja','Ilość','Jedn.','Materiał','Robocizna','Uwzględnij'].join(';');
-      const lines = [head];
-      rows.forEach(tr=>{
-        const pos = tr.children[0].innerText.replace(/;/g,',');
-        const qty = tr.querySelector('[data-role="qty"]').value;
-        const unit= tr.children[2].innerText;
-        const mat = tr.querySelector('[data-role="mat"]').value;
-        const lab = tr.querySelector('[data-role="lab"]').value;
-        const use = tr.querySelector('[data-role="use"]').checked ? 1 : 0;
-        lines.push([pos,qty,unit,mat,lab,use].join(';'));
-      });
-      const blob = new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
-      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='capex_prof_instal.csv'; a.click();
-      URL.revokeObjectURL(a.href);
-    });
+      <hr class="sep">
 
-    // —— ROI —— 
-    function npv(rate, CF){ return CF.reduce((s,cf,t)=>s + cf/Math.pow(1+rate,t), 0); }
-    function irr(CF){
-      const f=(r)=>npv(r,CF); let lo=-0.99, hi=1.0, flo=f(lo), fhi=f(hi);
-      if(flo*fhi>0) return null;
-      for(let i=0;i<80;i++){ const m=(lo+hi)/2, fm=f(m); if(Math.abs(fm)<1e-7) return m; if(flo*fm<=0){hi=m;fhi=fm;} else {lo=m;flo=fm;} }
-      return (lo+hi)/2;
-    }
-    function discountedPayback(CF, r){
-      let cum=0;
-      for(let t=0;t<CF.length;t++){
-        const df=1/Math.pow(1+r,t), add=CF[t]*df, prev=cum; cum+=add;
-        if(cum>=0){
-          const remain = -prev;
-          return t===0?0: (t-1) + (remain/(add||1));
-        }
-      }
-      return null;
-    }
-
-    function getCapex(){ return recalcCapexTable(); }
-
-    function computeROI(){
-      const capex = getCapex();
-      const useSc = $('useScenarioSavings').checked;
-      const aud = window.__aud || {};
-      let sav1 = useSc && isFinite(aud.savYear) ? aud.savYear : (+$('manualSaving').value||0);
-
-      const infl = (+$('inflation').value||0)/100;
-      const r = (+$('discount').value||0)/100;
-      const N = Math.max(1, parseInt($('horizon').value||'10',10));
-      const opex = +$('opexDelta').value||0;
-
-      const CF = new Array(N+1).fill(0);
-      CF[0] = -capex;
-      for(let t=1;t<=N;t++){
-        const s = sav1*Math.pow(1+infl,t-1) - opex;
-        CF[t] = s;
-      }
-
-      const npvVal = npv(r, CF);
-      const irrVal = irr(CF);
-      const dpb = discountedPayback(CF, r);
-      const payback = (sav1-opex)>0 ? (capex/(sav1-opex)) : null;
-
-      $('kpi_capex').textContent = fmt2.format(capex)+' zł';
-      $('kpi_sav1').textContent = fmt2.format(sav1-opex)+' zł/rok';
-      $('kpi_payback').textContent = payback!=null? fmt2.format(payback)+' lat':'—';
-      $('kpi_dpb').textContent = dpb!=null? fmt2.format(dpb)+' lat':'—';
-      $('kpi_npv').textContent = fmt2.format(npvVal)+' zł';
-      $('kpi_irr').textContent = (irrVal!=null? fmt2.format(irrVal*100)+' %':'—');
-
-      window.__roi = {capex, sav1, opex, infl, r, N, CF, npvVal, irrVal, dpb, useSc};
-    }
-
-    // —— UI bindings ——
-    $('btnCalc').addEventListener('click', calc);
-    $('btnReset').addEventListener('click', ()=>location.reload());
-    $('btnCopyKPI').addEventListener('click', async ()=>{
-      const a = window.__aud;
-      if(!a){ alert('Najpierw „Przelicz”.'); return; }
-      const L=[
-        'AUDYT — KPI (pełne straty CWU)',
-        `E_użyteczna: ${fmt2.format(a.E_use)} kWh/mies.`,
-        `Przygotowanie (wejściowa): ${fmt2.format(a.E_we)} kWh/mies., strata: ${fmt2.format(a.E_prepLoss)} kWh`,
-        `Straty zasobnika: ${fmt2.format(a.Q_tank)} kWh/mies.`,
-        `Straty cyrkulacji: ${fmt2.format(a.Q_circ)} kWh/mies.`,
-        `Razem energia cieplna: ${fmt2.format(a.E_heat_total)} kWh/mies., koszt ciepła: ${fmt2.format(a.costHeat)} zł`,
-        `Energia pomp: ${fmt2.format(a.E_pump)} kWh/mies., koszt: ${fmt2.format(a.costPump)} zł`,
-        `Oszczędność (mies.): ${fmt2.format(a.savMonth)} zł; (12 mies.): ${fmt2.format(a.savYear)} zł`
-      ];
-      try{ await navigator.clipboard.writeText(L.join('\n')); alert('Skopiowano KPI.'); }catch{ alert('Zaznacz i Ctrl+C.'); }
-    });
-    $('btnPrint').addEventListener('click', ()=>window.print());
-
-    $('btnROI').addEventListener('click', computeROI);
-    $('btnCopyROI').addEventListener('click', async ()=>{
-      const r=window.__roi; if(!r){ alert('Najpierw policz ROI.'); return; }
-      const L=[
-        'ROI — podsumowanie',
-        `CAPEX: ${fmt2.format(r.capex)} zł`,
-        `Oszczędność rok 1 (po OPEX): ${fmt2.format(r.sav1 - r.opex)} zł/rok`,
-        `Horyzont: ${r.N} lat; r=${fmt2.format(r.r*100)}%; infl=${fmt2.format(r.infl*100)}%`,
-        `Payback: ${r.sav1 - r.opex > 0 ? fmt2.format(r.capex/(r.sav1 - r.opex))+' lat':'—'}`,
-        `Discounted payback: ${r.dpb!=null? fmt2.format(r.dpb)+' lat':'—'}`,
-        `NPV: ${fmt2.format(r.npvVal)} zł`,
-        `IRR: ${r.irrVal!=null? fmt2.format(r.irrVal*100)+' %':'—'}`
-      ];
-      try{ await navigator.clipboard.writeText(L.join('\n')); alert('Skopiowano ROI.'); }catch{ alert('Zaznacz i Ctrl+C.'); }
-    });
-    $('btnDownloadROI').addEventListener('click', ()=>{
-      const r=window.__roi, a=window.__aud;
-      if(!r||!a){ alert('Najpierw przelicz kalkulator i ROI.'); return; }
-      const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-      const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>ROI – PROF INSTAL</title>
-<style>body{font-family:Calibri,Arial,sans-serif;margin:28px;color:#111}h1{color:#0b735f;font-size:1.4rem;margin:0 0 8px}
-hr{border:none;border-top:2px solid #10b981;margin:8px 0 12px}.small{color:#435}ul{line-height:1.5}</style></head><body>
-<h1>ROI – Modernizacja CWU/cyrkulacji</h1><div class="small">Automatyczny raport PROF INSTAL.</div><hr>
-<h3>KPI energetyczne (mies.)</h3>
-<ul>
-<li>E_użyteczna: ${fmt2.format(a.E_use)} kWh; przygotowanie: ${fmt2.format(a.E_we)} kWh (strata: ${fmt2.format(a.E_prepLoss)} kWh)</li>
-<li>Straty zasobnika: ${fmt2.format(a.Q_tank)} kWh; cyrkulacja: ${fmt2.format(a.Q_circ)} kWh</li>
-<li>Razem energia cieplna: ${fmt2.format(a.E_heat_total)} kWh; koszt ciepła: ${fmt2.format(a.costHeat)} zł</li>
-<li>Energia pomp: ${fmt2.format(a.E_pump)} kWh; koszt: ${fmt2.format(a.costPump)} zł</li>
-<li>Oszczędność: ${fmt2.format(a.savMonth)} zł/mies. • ${fmt2.format(a.savYear)} zł/rok</li>
-</ul>
-<h3>Wyniki finansowe</h3>
-<ul>
-<li>CAPEX: ${fmt2.format(r.capex)} zł</li>
-<li>Payback: ${r.sav1 - r.opex > 0 ? fmt2.format(r.capex/(r.sav1 - r.opex))+' lat':'—'}</li>
-<li>Discounted payback: ${r.dpb!=null? fmt2.format(r.dpb)+' lat':'—'}</li>
-<li>NPV: ${fmt2.format(r.npvVal)} zł</li>
-<li>IRR: ${r.irrVal!=null? fmt2.format(r.irrVal*100)+' %':'—'}</li>
-</ul>
-<footer style="margin-top:18px;padding-top:10px;border-top:1px solid #aaa;color:#333;font-size:.9rem">© PROF INSTAL – Wszelkie prawa zastrzeżone</footer>
-</body></html>`;
-      const blob=new Blob([html],{type:'application/msword'});
-      const ael=document.createElement('a'); ael.href=URL.createObjectURL(blob); ael.download='ROI_PROF_INSTAL.doc'; ael.click();
-      URL.revokeObjectURL(ael.href);
-    });
-
-    // Autostart
-    window.addEventListener('DOMContentLoaded', ()=>{ calc(); recalcCapexTable(); });
-  </script>
+      <!-- KPI CAPEX -->
+      <div class="kpis">
+        <div class="kpi"><div class="label">Razem CAPEX</div><div class="val" id="capexTotal">– zł</div></div>
+      </div>
+    </section>
 </body>
 </html>
