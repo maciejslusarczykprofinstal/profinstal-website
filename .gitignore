@@ -43,3 +43,7 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+# lokalne próbki
+*.pdf
+sample_pdf_wzory.py
+audytorzy.py
