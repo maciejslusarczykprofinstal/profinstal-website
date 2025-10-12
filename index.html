@@ -850,5 +850,47 @@
   border: 1px solid #e5e7eb; z-index: 9999;">
   Deploy test ✅
 </div>
+<script>
+(()=>{ // mini-togglechat: prawy-dolny róg
+  const css = `
+  #tc-btn{position:fixed;right:16px;bottom:16px;z-index:9999;width:56px;height:56px;border:none;border-radius:50%;background:#2563eb;color:#fff;box-shadow:0 10px 30px rgba(2,6,23,.18);cursor:pointer}
+  #tc-win{position:fixed;right:16px;bottom:84px;z-index:9998;width:min(380px,calc(100vw - 24px));max-height:70vh;background:#fff;color:#0f172a;border-radius:16px;box-shadow:0 10px 30px rgba(2,6,23,.18);display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s}
+  #tc-win.tc-open{opacity:1;transform:translateY(0);pointer-events:auto}
+  #tc-h{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #e2e8f0;background:#f8fafc;font:600 14px/1.2 system-ui}
+  #tc-body{padding:12px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+  .tc-msg{padding:10px 12px;border-radius:12px;max-width:85%}
+  .tc-user{align-self:flex-end;background:#e0f2fe}
+  .tc-bot{align-self:flex-start;background:#f1f5f9}
+  #tc-form{border-top:1px solid #e2e8f0;padding:10px;display:flex;gap:8px;background:#fff}
+  #tc-inp{flex:1;min-height:40px;max-height:120px;resize:none;padding:10px 12px;border:1px solid #cbd5e1;border-radius:12px;outline:none}
+  #tc-send{height:40px;padding:0 14px;border:none;border-radius:12px;background:#2563eb;color:#fff;cursor:pointer}
+  `;
+  const style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
+
+  const btn=document.createElement('button');btn.id='tc-btn';btn.title='Chat';
+  btn.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M20 12a7 7 0 0 1-7 7H7l-3 3v-3a7 7 0 1 1 0-14h9a7 7 0 0 1 7 7Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const win=document.createElement('section');win.id='tc-win';win.setAttribute('role','dialog');win.innerHTML=`
+    <div id="tc-h">Asystent <button id="tc-x" aria-label="Zamknij" style="background:none;border:none;font-size:20px;cursor:pointer">×</button></div>
+    <div id="tc-body" aria-live="polite"></div>
+    <form id="tc-form"><textarea id="tc-inp" placeholder="Napisz wiadomość…" rows="1"></textarea><button id="tc-send">Wyślij</button></form>
+  `;
+  document.body.append(btn,win);
+
+  const body=win.querySelector('#tc-body'), inp=win.querySelector('#tc-inp');
+  const open=()=>{win.classList.add('tc-open');localStorage.setItem('tc-open','1');setTimeout(()=>inp.focus(),50);}
+  const close=()=>{win.classList.remove('tc-open');localStorage.setItem('tc-open','0');}
+  btn.onclick=()=>win.classList.contains('tc-open')?close():open();
+  win.querySelector('#tc-x').onclick=close;
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&win.classList.contains('tc-open'))close();});
+  if(localStorage.getItem('tc-open')==='1')open();
+
+  function push(t,cls){const d=document.createElement('div');d.className='tc-msg '+cls;d.textContent=t;body.appendChild(d);body.scrollTop=body.scrollHeight;}
+  win.querySelector('#tc-form').addEventListener('submit',e=>{
+    e.preventDefault();const t=inp.value.trim();if(!t)return;push(t,'tc-user');inp.value='';inp.style.height='40px';
+    setTimeout(()=>push('Echo: “‘'+t+'’”. Możesz podpiąć API.','tc-bot'),250);
+  });
+  inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,120)+'px';});
+})();
+</script>
 </body>
 </html>
