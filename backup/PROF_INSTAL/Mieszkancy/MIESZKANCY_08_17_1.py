@@ -7,7 +7,7 @@ EXPERT = {
     "title": "Ekspert HVAC / instalacje sanitarne",
     "lic": "Uprawnienia budowlane bez ograniczeń, nr XXX/XX/XX",
     "chamber": "Członek Małopolskiej OIIB",
-    "contact": "kontakt@profinstal.info | +48 123 456 789",
+    "contact": "kontakt@profinstal.info | +48 798-513-000",
     "company": "PROF INSTAL",
     "city": "Kraków"
 }
