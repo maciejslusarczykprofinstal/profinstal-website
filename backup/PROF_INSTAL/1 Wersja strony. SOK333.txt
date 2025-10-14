@@ -97,7 +97,7 @@
       protocol: 'cwuapp://open',
       downloadUrl: '/downloads/PROF-INSTAL-Setup.exe',
       email: 'support@profinstal.info',
-      phone: '+48 000 000 000'
+      phone: '+48 798-513-000'
     };
   </script>
 
