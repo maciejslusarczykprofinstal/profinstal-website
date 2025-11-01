@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test pobierania DOCX</title>
+</head>
+<body>
+    <h1>Test API /api/audit-cwu?format=docx</h1>
+    <button onclick="downloadReport()">Pobierz raport DOCX</button>
+    <div id="status"></div>
+    
+    <script>
+        async function downloadReport() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = 'Generuję raport...';
+            
+            try {
+                const response = await fetch('/api/audit-cwu?format=docx', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        liczba_mieszkan: "50",
+                        liczba_pionow: "4",
+                        temp_zimnej_wody: "10",
+                        temp_cwu: "55",
+                        procent_strat_cyrkulacji: "10"
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Błąd API: ' + response.status);
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'test-audyt-cwu.docx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                statusDiv.textContent = 'Raport został pobrany!';
+            } catch (error) {
+                statusDiv.textContent = 'Błąd: ' + error.message;
+                console.error('Błąd:', error);
+            }
+        }
+    </script>
+</body>
+</html>

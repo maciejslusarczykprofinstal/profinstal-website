@@ -1,49 +1,323 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { calculatePower } from '@/lib/utils/cwu-calculations';
+import type { CwuCalculatorData } from '@/lib/types';
+import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, AlignmentType, TextRun } from 'docx';
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const data = await req.json();
-    const errs: string[] = [];
+    const data: CwuCalculatorData = await request.json();
+    const { searchParams } = new URL(request.url);
+    const format = searchParams.get('format') || 'json';
+    
+    // Walidacja wymaganych pól
+    if (!data.liczba_mieszkan || !data.liczba_pionow || !data.temp_zimnej_wody || !data.temp_cwu) {
+      return NextResponse.json(
+        { error: 'Brakuje wymaganych danych' },
+        { status: 400 }
+      );
+    }
 
-    const need = ["E_DHW_GJ","V_DHW_m3","price_GJ_PLN","T_hot_C","T_cold_C","period"];
-    for (const k of need) if (data[k] === undefined) errs.push(`${k} jest wymagane`);
-    if (errs.length) return NextResponse.json({ ok:false, errors:errs }, { status:400 });
+    // Obliczenia mocy CWU
+    const result = calculatePower(data);
+    
+    // Generowanie podsumowania
+    const summary = {
+      liczba_mieszkan: parseInt(data.liczba_mieszkan),
+      liczba_pionow: parseInt(data.liczba_pionow),
+      temp_zimnej_wody: parseFloat(data.temp_zimnej_wody),
+      temp_cwu: parseFloat(data.temp_cwu),
+      procent_strat_cyrkulacji: parseFloat(data.procent_strat_cyrkulacji || '0'),
+      calculatedAt: new Date().toISOString(),
+      recommendations: generateRecommendations(result)
+    };
 
-    const E = Number(data.E_DHW_GJ);
-    const V = Number(data.V_DHW_m3);
-    const P = Number(data.price_GJ_PLN);
-    const Th = Number(data.T_hot_C ?? 55);
-    const Tc = Number(data.T_cold_C ?? 8);
+    if (format === 'docx') {
+      // Generowanie pliku DOCX
+      const docxBuffer = await generateDocxReport(data, result, summary);
+      
+      return new NextResponse(new Uint8Array(docxBuffer), {
+        headers: {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'Content-Disposition': `attachment; filename="audyt-cwu-${new Date().toISOString().split('T')[0]}.docx"`,
+        },
+      });
+    }
 
-    if (!(E>0)) errs.push("E_DHW_GJ > 0");
-    if (!(V>0)) errs.push("V_DHW_m3 > 0");
-    if (!(P>0)) errs.push("price_GJ_PLN > 0");
-    if (!(Th > Tc)) errs.push("T_hot_C > T_cold_C");
-    if (errs.length) return NextResponse.json({ ok:false, errors:errs }, { status:400 });
-
-    const deltaT = Th - Tc;
-    const E_th = 0.004186 * deltaT;   // GJ/m3
-    const E_real = E / V;             // GJ/m3
-    const eta = E_th / E_real;
-    const loss_pct = (1 - eta) * 100;
-    const cost_th = E_th * P;
-    const cost_real = E_real * P;
-    const loss_pln_per_m3 = cost_real - cost_th;
-    const loss_pln_total = loss_pln_per_m3 * V;
-
-    const warnings: string[] = [];
-    if (deltaT < 30 || deltaT > 60) warnings.push(`Nietypowe ΔT = ${deltaT.toFixed(1)} K`);
-    if (eta > 1.1) warnings.push("Sprawność > 110% – sprawdź E lub m³");
-    if (eta <= 0) warnings.push("Sprawność ≤ 0% – błąd danych");
-
+    // Domyślnie zwracamy JSON
     return NextResponse.json({
-      ok: true,
-      inputs: { period: data.period, E_DHW_GJ:E, V_DHW_m3:V, price_GJ_PLN:P, T_hot_C:Th, T_cold_C:Tc },
-      thermo: { deltaT_K: deltaT, E_th_GJ_per_m3:+E_th.toFixed(6), E_real_GJ_per_m3:+E_real.toFixed(6), eta_total:+eta.toFixed(4), loss_pct:+loss_pct.toFixed(2) },
-      costs: { cost_th_PLN_per_m3:+cost_th.toFixed(2), cost_real_PLN_per_m3:+cost_real.toFixed(2), loss_PLN_per_m3:+loss_pln_per_m3.toFixed(2), loss_PLN_total:+loss_pln_total.toFixed(2) },
-      warnings
+      powerKW: result.mocZamowiona,
+      summary: summary,
+      details: {
+        mocPodstawowa: result.mocPodstawowa,
+        mocZamowiona: result.mocZamowiona,
+        stratyCyrkulacji: result.stratyCyrkulacji,
+        procentStrat: result.procentStrat
+      }
     });
-  } catch (e:any) {
-    return NextResponse.json({ ok:false, errors:[e?.message || "Server error"] }, { status:500 });
+
+  } catch (error) {
+    console.error('Błąd w API audit-cwu:', error);
+    return NextResponse.json(
+      { error: 'Błąd podczas przetwarzania danych' },
+      { status: 500 }
+    );
   }
+}
+
+function generateRecommendations(result: { mocZamowiona: number; procentStrat: number }): string[] {
+  const recommendations: string[] = [];
+  
+  if (result.mocZamowiona < 15) {
+    recommendations.push('Zalecamy kocioł gazowy o mocy 15-20 kW');
+  } else if (result.mocZamowiona < 25) {
+    recommendations.push('Zalecamy kocioł gazowy o mocy 20-25 kW');
+  } else if (result.mocZamowiona < 35) {
+    recommendations.push('Zalecamy kocioł gazowy o mocy 25-35 kW');
+  } else {
+    recommendations.push('Zalecamy rozważenie kotła o większej mocy lub systemu kaskadowego');
+  }
+
+  if (result.procentStrat > 15) {
+    recommendations.push('Wysokie straty cyrkulacji - rozważenie izolacji przewodów');
+  } else if (result.procentStrat < 5) {
+    recommendations.push('Niskie straty cyrkulacji - dobrze zaprojektowana instalacja');
+  }
+
+  return recommendations;
+}
+
+async function generateDocxReport(
+  data: CwuCalculatorData, 
+  result: any, 
+  summary: any
+): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: [
+          // Nagłówek raportu
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "RAPORT AUDYTU CWU",
+                bold: true,
+                size: 32,
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 400 },
+          }),
+
+          // Data wygenerowania
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Data wygenerowania: ${new Date().toLocaleDateString('pl-PL')}`,
+                size: 20,
+              }),
+            ],
+            spacing: { after: 400 },
+          }),
+
+          // Tabela z danymi wejściowymi
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "DANE WEJŚCIOWE",
+                bold: true,
+                size: 24,
+              }),
+            ],
+            spacing: { before: 200, after: 200 },
+          }),
+
+          new Table({
+            width: {
+              size: 100,
+              type: WidthType.PERCENTAGE,
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Parametr", bold: true })] })],
+                    width: { size: 50, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Wartość", bold: true })] })],
+                    width: { size: 50, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Liczba mieszkań" })] })],
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: data.liczba_mieszkan })] })],
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Liczba pionów" })] })],
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: data.liczba_pionow })] })],
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Temperatura zimnej wody (°C)" })] })],
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: data.temp_zimnej_wody })] })],
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Temperatura CWU (°C)" })] })],
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: data.temp_cwu })] })],
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Procent strat cyrkulacji (%)" })] })],
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: data.procent_strat_cyrkulacji || "0" })] })],
+                  }),
+                ],
+              }),
+            ],
+          }),
+
+          // Wyniki obliczeń
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "WYNIKI OBLICZEŃ",
+                bold: true,
+                size: 24,
+              }),
+            ],
+            spacing: { before: 400, after: 200 },
+          }),
+
+          new Table({
+            width: {
+              size: 100,
+              type: WidthType.PERCENTAGE,
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Parametr", bold: true })] })],
+                    width: { size: 50, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Wartość", bold: true })] })],
+                    width: { size: 50, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Moc podstawowa (kW)" })] })],
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: result.mocPodstawowa.toFixed(2) })] })],
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Moc zamówiona (kW)", bold: true, color: "FF0000" })] })],
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: result.mocZamowiona.toFixed(2), bold: true, color: "FF0000" })] })],
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Straty cyrkulacji (kW)" })] })],
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: result.stratyCyrkulacji.toFixed(2) })] })],
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: "Procent strat (%)" })] })],
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: result.procentStrat.toFixed(1) })] })],
+                  }),
+                ],
+              }),
+            ],
+          }),
+
+          // Rekomendacje
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "REKOMENDACJE",
+                bold: true,
+                size: 24,
+              }),
+            ],
+            spacing: { before: 400, after: 200 },
+          }),
+
+          ...summary.recommendations.map((rec: string) => 
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `• ${rec}`,
+                  size: 20,
+                }),
+              ],
+              spacing: { after: 100 },
+            })
+          ),
+
+          // Stopka
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Raport wygenerowany automatycznie przez system PROF-INSTAL",
+                italics: true,
+                size: 18,
+                color: "666666",
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 600 },
+          }),
+        ],
+      },
+    ],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  return buffer;
 }
