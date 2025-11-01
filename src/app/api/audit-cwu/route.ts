@@ -14,6 +14,7 @@ export async function POST(req: Request) {
     const P = Number(data.price_GJ_PLN);
     const Th = Number(data.T_hot_C ?? 55);
     const Tc = Number(data.T_cold_C ?? 8);
+
     if (!(E>0)) errs.push("E_DHW_GJ > 0");
     if (!(V>0)) errs.push("V_DHW_m3 > 0");
     if (!(P>0)) errs.push("price_GJ_PLN > 0");
